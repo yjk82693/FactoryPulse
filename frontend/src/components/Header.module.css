@@ -10,6 +10,10 @@
   flex-shrink: 0;
 }
 
+.header > nav {
+  flex: 1;
+}
+
 .brand {
   display: flex;
   flex-direction: column;

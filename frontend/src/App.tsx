@@ -3,6 +3,7 @@ import { AuthGate, ProtectedRoute } from "./auth/AuthGate";
 import { LandingPage } from "./pages/LandingPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
+import { OptimizerPage } from "./pages/OptimizerPage";
 import { AccessDenied } from "./pages/AccessDenied";
 import { NotFound } from "./pages/NotFound";
 
@@ -18,6 +19,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/optimizer"
+          element={
+            <ProtectedRoute>
+              <OptimizerPage />
             </ProtectedRoute>
           }
         />

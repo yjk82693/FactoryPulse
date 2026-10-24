@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { getConfig } from "../config";
 import type { ConnectionStatus } from "../state/streamReducer";
+import { AppNav } from "./AppNav";
 import { BrandMark } from "./BrandMark";
 import styles from "./Header.module.css";
 
@@ -21,9 +22,20 @@ interface Props {
   status: ConnectionStatus;
   statusDetail: string | null;
   demoMode?: boolean;
+  showStreamStatus?: boolean;
+  exampleLayout?: boolean;
 }
 
-export function Header({ companyName, userName, role, status, statusDetail, demoMode }: Props) {
+export function Header({
+  companyName,
+  userName,
+  role,
+  status,
+  statusDetail,
+  demoMode,
+  showStreamStatus = true,
+  exampleLayout = false,
+}: Props) {
   const config = getConfig();
   return (
     <header className={styles.header}>
@@ -31,16 +43,27 @@ export function Header({ companyName, userName, role, status, statusDetail, demo
         <BrandMark size="sm" />
         <div className={styles.company}>{companyName}</div>
       </Link>
+      <AppNav />
       <div className={styles.meta}>
+        {exampleLayout ? (
+          <span
+            className={`${styles.badge} ${styles.demoData}`}
+            title="Local example floor and flow matrix. Not CSI locations or live machine state."
+          >
+            Example layout
+          </span>
+        ) : null}
         {demoMode ? (
           <span className={`${styles.badge} ${styles.demoData}`} title="Local demo source. No live API or WebSocket.">
             Demo data
           </span>
         ) : null}
-        <span className={`${styles.badge} ${styles[status]}`} title={statusDetail ?? STATUS_LABEL[status]}>
-          <span className={styles.dot} aria-hidden="true" />
-          {STATUS_LABEL[status]}
-        </span>
+        {showStreamStatus ? (
+          <span className={`${styles.badge} ${styles[status]}`} title={statusDetail ?? STATUS_LABEL[status]}>
+            <span className={styles.dot} aria-hidden="true" />
+            {STATUS_LABEL[status]}
+          </span>
+        ) : null}
         {config.authDisabled ? <span className={styles.badge}>Auth disabled (dev)</span> : null}
         <span className={styles.user}>
           {userName}

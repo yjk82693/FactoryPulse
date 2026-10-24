@@ -1,0 +1,76 @@
+.wrap {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.objective {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.metrics label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.metrics strong {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gain {
+  color: var(--status-success);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.primary,
+.secondary {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  font-weight: 650;
+  font-size: 14px;
+}
+
+.primary {
+  background: var(--accent-primary);
+  color: #101214;
+  border: none;
+}
+
+.primary:hover {
+  background: var(--accent-primary-hover);
+}
+
+.secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+}
+
+.secondary:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+@media (max-width: 768px) {
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+}

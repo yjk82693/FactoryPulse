@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { getConfig } from "../config";
 import { BrandMark } from "../components/BrandMark";
@@ -34,9 +34,17 @@ function DisabledLogin() {
   );
 }
 
+function safeReturnTo(value: unknown): string {
+  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//")
+    ? value
+    : "/dashboard";
+}
+
 function AuthLogin() {
   const { loginWithRedirect, isAuthenticated, isLoading, error } = useAuth0();
+  const location = useLocation();
   const [actionError, setActionError] = useState<string | null>(null);
+  const returnTo = safeReturnTo((location.state as { from?: string } | null)?.from);
 
   if (isLoading) {
     return (
@@ -50,14 +58,14 @@ function AuthLogin() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={returnTo} replace />;
   }
 
   async function startLogin(): Promise<void> {
     setActionError(null);
     try {
       await loginWithRedirect({
-        appState: { returnTo: "/dashboard" },
+        appState: { returnTo },
         authorizationParams: {
           audience: getConfig().auth0Audience ?? undefined,
           redirect_uri: window.location.origin,
