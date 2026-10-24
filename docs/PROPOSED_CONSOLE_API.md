@@ -1,38 +1,14 @@
-# Proposed console APIs (review with Developer B)
+# Proposed console APIs — superseded by Contract v1.3
 
-This document is **not** Contract v1.2. Do not implement these endpoints until A, B, and C agree. The frontend currently uses **in-memory mock adapters** (`frontend/src/console/`) so Demo Mode works without `backend/`.
+The official Console API is **`docs/event-schema.md` sections 14–16**.
 
-Existing live cell monitoring remains `docs/event-schema.md`: `POST /api/events` sensor ingest, `GET /api/state`, `/ws`, alerts, voice.
+This file was a pre-contract sketch. Differences vs v1.3 (v1.3 wins):
 
-## Why a separate proposal
+- Path is `/api/console/sensing-links`, not `/sensor-links`.
+- Calibrations are `GET/POST /api/console/calibrations`, not nested only on profiles.
+- Profile versions are immutable (`POST .../versions`).
+- Physical sensors are GET-only in P0; ingest bind stays env → `assembly_01`.
 
-Registry, profiles, simulation, sensor assignment, and sensor-placement scoring are **console configuration**. They are not CSI packets and not machine-sim step events.
+The frontend still uses **in-memory** `MemoryConsoleStore` (`frontend/src/console/`) until Developer B implements `/api/console/*` and Developer C adds `HttpConsoleStore`.
 
-## Suggested resource shapes (names only)
-
-- `Machine`: id, name, kind (`press|picker|conveyor`), zone_id, operating_status, profile_id, sensor_link_ids
-- `MotionProfile`: id, template_id, name, machine_kind, version, phases[], calibrations[]
-- `SensorLink`: id, name, mode (`dedicated|shared_zone`), zone_id, machine_ids[]
-- Simulation stays **client-side synthetic** unless B later exposes a replay API. Do not POST raw CSI heatmaps as if they were v1.2 events.
-
-## Suggested routes (unofficial)
-
-None of these exist today:
-
-- `GET/POST /api/console/machines`
-- `PATCH/DELETE /api/console/machines/{id}`
-- `GET/POST /api/console/profiles`
-- `POST /api/console/profiles/{id}/calibrations`
-- `GET/PUT/DELETE /api/console/sensor-links`
-
-Auth would follow the same Bearer / `AUTH_DISABLED` rules as other operator APIs. Company scoping like the rest of the product.
-
-## Mapping later
-
-Replace `MemoryConsoleStore` with an HTTP adapter that implements the same TypeScript methods. UI pages should not need a rewrite if the interface stays stable.
-
-## Do not
-
-- Treat console anomaly alerts as `STEP_FAILURE`
-- Add heatmap blobs to the v1.2 event envelope without a three-way contract change
-- Claim placement scores are measured RF accuracy
+Live cell ingest remains unchanged: `POST /api/events`, `GET /api/state`, `/ws`.

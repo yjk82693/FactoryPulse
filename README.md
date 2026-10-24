@@ -11,7 +11,7 @@ Run physical CSI sensing through the backend to the React dashboard: [Live CSI s
 | `firmware/`, `sensing/` | Developer A (ESP32, Wi-Fi CSI) |
 | `backend/` | Developer B (local FastAPI, in-memory sim + CSI ingest; Auth0/voice/DB not in this process) |
 | `frontend/` | Developer C (React dashboard, Auth0 SPA, voice UI, optimizer) |
-| `docs/event-schema.md` | Shared contract v1.2 — change only with A+B+C |
+| `docs/event-schema.md` | Shared contract **v1.3** — change only with A+B+C. Archived v1.2: `docs/archive/event-schema-v1.2.md` |
 
 Judging script: [`docs/DEMO.md`](docs/DEMO.md). Frontend setup: [`frontend/README.md`](frontend/README.md).
 
@@ -20,7 +20,7 @@ Judging script: [`docs/DEMO.md`](docs/DEMO.md). Frontend setup: [`frontend/READM
 ```
 ESP32 TX/RX  →  csi_stream.py     →  POST /api/events   FastAPI :8000
 Machine sim  →  in-process ingest →  State + WS /ws  →  React :5173
-Layout optimizer and Console registry/profiles/placement are frontend-local mocks.
+Layout optimizer and Console registry/profiles/placement are frontend-local mocks until `/api/console/*` (Contract v1.3) is implemented.
 ```
 
 ## Frontend env (names only)

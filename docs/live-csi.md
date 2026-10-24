@@ -1,5 +1,7 @@
 # Live CSI -> React (local development)
 
+Contract: [`docs/event-schema.md`](event-schema.md) **v1.3** (live ingest unchanged from v1.2). `/api/console/*` is specified, not implemented.
+
 The existing React `LiveSource` consumes Developer B’s FastAPI backend without swapping in Demo data. The **machine is always simulated**. Sensor readings come from `POST /api/events` (ESP32 RX via `csi_stream.py`, or a contract-valid test ingest). This backend is local, single-company, in-memory only. Auth0, database, ElevenLabs, and Gemini are **not implemented**. Keep the server bound to localhost.
 
 **Verified 2026-10-24 (no ESP32 hardware):** REST (`/health`, `/api/me`, `/api/state`, `/api/events`, `/api/alerts`, `POST /api/alerts/{id}/ack`) and WebSocket `/ws` (`ready` then `state`) against `2364894` with `AUTH_DISABLED=true` and `SIM_ENABLED=true`. Activity was injected as a **synthetic HTTP** `ACTIVITY_DETECTED` (`method: simulated`), not from serial CSI. Voice `POST /api/alerts/{id}/voice` returns **404** (not implemented).

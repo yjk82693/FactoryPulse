@@ -1,6 +1,6 @@
 # FactoryPulse judging demo (2–3 minutes)
 
-Prototype only. The assembly machine is simulated. Wi-Fi CSI is an operational observation, not certified safety, identity, or location.
+Prototype only. The assembly machine is simulated. Wi-Fi CSI is an operational observation, not certified safety, identity, or location. Shared API: [`docs/event-schema.md`](event-schema.md) Contract **v1.3**.
 
 **Reliable path (always use if ESP32 or backend is missing):** Demo Mode. That is the default in `frontend/.env.example`.
 

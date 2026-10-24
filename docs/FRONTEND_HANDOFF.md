@@ -14,7 +14,7 @@ Constraints everyone must keep:
 
 - The machine is simulated. The UI must label simulated sensor data.
 - CSI activity is an operational observation, not certified safety monitoring. Copy must never claim a verified incident, identity, or location.
-- Contract **v1.2** in `docs/event-schema.md` is the source of truth.
+- Contract **v1.3** in `docs/event-schema.md` is the source of truth (v1.2 archived at `docs/archive/event-schema-v1.2.md`).
 - ElevenLabs and Gemini keys live only on the backend. The browser never calls ElevenLabs or Gemini.
 - No custom username/password forms. Auth is Auth0 Universal Login, or auth-disabled local continue.
 - Never commit secrets (`.env`, Client Secret, sensor keys, API keys).
@@ -47,7 +47,7 @@ App root: `frontend/`. Dev server: `http://localhost:5173`. Backend (Live): `htt
 | `/` | `LandingPage` | Public |
 | `/login` | `LoginPage` | Public. Auth0 redirect, or “Continue to dashboard” when `VITE_AUTH_DISABLED=true` |
 | `/dashboard` | `DashboardPage` | `ProtectedRoute`: skipped when auth disabled **or** Demo Mode; otherwise Auth0 session required |
-| `/machines` `/profiles` `/simulator` `/sensors` | Mock console pages | Same protection. In-memory `ConsoleStore` — not Contract v1.2 |
+| `/machines` `/profiles` `/simulator` `/sensors` | Mock console pages | Same protection. In-memory `ConsoleStore` until v1.3 `/api/console/*` |
 | `/optimizer` | Layout optimizer | Same protection. Example floor, not CSI |
 | `/optimizer/sensors` | Sensor-placement comparison | Illustrative cost/coverage/ambiguity scores |
 | `/access-denied` | `AccessDenied` | Public; used for company/membership failures |
@@ -62,7 +62,7 @@ App root: `frontend/`. Dev server: `http://localhost:5173`. Backend (Live): `htt
 - `DataSource` interface:
   - **DemoSource** — local contract-valid simulation. Zero network.
   - **LiveSource** — `GET /api/state` then WebSocket `/ws`, plus `/api/me` and `POST /api/alerts/{id}/ack`. Never falls back to demo data. Local FastAPI in `backend/` is auth-disabled in-memory only (`docs/live-csi.md`).
-- Console modules use a separate `ConsoleStore` (`frontend/src/console/`) with `MemoryConsoleStore`. Do not merge this into `streamReducer`. Proposed HTTP resources are in `docs/PROPOSED_CONSOLE_API.md` (not Contract v1.2).
+- Console modules use a separate `ConsoleStore` (`frontend/src/console/`) with `MemoryConsoleStore`. Do not merge this into `streamReducer`. HTTP resources: Contract v1.3 `docs/event-schema.md` §§14–16.
 
 ### Major UI components
 
@@ -75,7 +75,7 @@ App root: `frontend/`. Dev server: `http://localhost:5173`. Backend (Live): `htt
 | Voice | `hooks/useAlertVoice.ts` — POST voice, blob URL cache, single `HTMLAudioElement` |
 | Auth | `auth/AuthGate.tsx`, `auth/tokenContext.ts`, `auth/useAccessToken.ts` |
 | API/WS | `services/api.ts`, `services/ws.ts` |
-| Types | `types/contract.ts` — mirrors contract v1.2 |
+| Types | `types/contract.ts` — mirrors live-cell contract (v1.2/v1.3 §§1–13) |
 
 Dashboard identity: Demo Mode + auth disabled → “Demo Operator”. Demo + Auth0 signed in → Auth0 name. Company in demo: “Demo Manufacturing (demo data)”.
 
@@ -172,7 +172,7 @@ Implemented in the frontend. Wired to contract section 13.
 
 ## 8. API / WebSocket integration and event-schema contract
 
-Contract file: `docs/event-schema.md` **v1.2**. Frontend types: `src/types/contract.ts`.
+Contract file: `docs/event-schema.md` **v1.3**. Frontend live-cell types: `src/types/contract.ts`. Console types: `src/console/types.ts`.
 
 REST used by the SPA (Bearer unless auth disabled):
 

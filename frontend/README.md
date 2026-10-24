@@ -17,8 +17,8 @@ App: http://localhost:5173
 - `/dashboard` assembly cell dashboard  
 - `/optimizer` example factory layout optimizer (not CSI coordinates)  
 - `/optimizer/sensors` illustrative sensor-placement comparison  
-- `/machines`, `/profiles`, `/simulator`, `/sensors` mock console (in-memory, not Contract v1.2)  
-Backend (Live Mode): http://localhost:8000 — setup in [`docs/live-csi.md`](../docs/live-csi.md). Console pages stay on in-memory mocks.
+- `/machines`, `/profiles`, `/simulator`, `/sensors` mock console (in-memory until Contract v1.3 `/api/console/*`)  
+Backend (Live Mode): http://localhost:8000 — setup in [`docs/live-csi.md`](../docs/live-csi.md). Console pages stay on in-memory mocks. Shared contract: [`docs/event-schema.md`](../docs/event-schema.md) v1.3.
 
 Hackathon walkthrough and ESP32/API fallback: [`docs/DEMO.md`](../docs/DEMO.md).
 
