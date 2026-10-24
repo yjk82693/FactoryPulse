@@ -1,11 +1,25 @@
 # Live CSI -> React (local development)
 
-The existing React LiveSource consumes this backend without UI changes. The machine
-is simulated; sensor readings come from the physical ESP32 receiver. This backend
-implements local, single-company, in-memory operation only; Auth0, database, voice,
-and explanations are not implemented. Keep the server bound to localhost.
+The existing React `LiveSource` consumes Developer B’s FastAPI backend without swapping in Demo data. The **machine is always simulated**. Sensor readings come from `POST /api/events` (ESP32 RX via `csi_stream.py`, or a contract-valid test ingest). This backend is local, single-company, in-memory only. Auth0, database, ElevenLabs, and Gemini are **not implemented**. Keep the server bound to localhost.
 
-## 1. Backend (PowerShell, from FactoryTetris)
+**Verified 2026-10-24 (no ESP32 hardware):** REST (`/health`, `/api/me`, `/api/state`, `/api/events`, `/api/alerts`, `POST /api/alerts/{id}/ack`) and WebSocket `/ws` (`ready` then `state`) against `2364894` with `AUTH_DISABLED=true` and `SIM_ENABLED=true`. Activity was injected as a **synthetic HTTP** `ACTIVITY_DETECTED` (`method: simulated`), not from serial CSI. Voice `POST /api/alerts/{id}/voice` returns **404** (not implemented).
+
+## 1. Backend (from FactoryTetris)
+
+macOS / zsh:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r backend/requirements.txt
+export AUTH_DISABLED=true
+export SIM_ENABLED=true
+export SENSOR_ID=csi-rx-01
+export SENSOR_INGEST_KEY='replace-with-your-local-secret'
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+```
+
+PowerShell:
 
 ```powershell
 python -m pip install -r backend/requirements.txt
@@ -16,30 +30,36 @@ $env:SENSOR_INGEST_KEY = 'replace-with-your-local-secret'
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
-## 2. Sensor (another terminal, from FactoryTetris)
+Startup **requires** `AUTH_DISABLED=true` and `SENSOR_INGEST_KEY`. Do not set `AUTH_DISABLED=false` against this server; Auth0 JWT validation is not present.
 
-Flash TX/RX as described in sensing/processing/README.md. Close the serial monitor.
+Backend contract tests (from repo root, with the venv active). CSI preprocessing also needs `numpy` and `pyserial` (`sensing/processing/python/requirements.txt`):
 
-```powershell
-python -m pip install -r sensing/processing/python/requirements.txt
-$env:SENSOR_INGEST_KEY = 'replace-with-your-local-secret'
-python sensing/processing/python/csi_stream.py --port COM5
+```bash
+export AUTH_DISABLED=true SENSOR_INGEST_KEY=test-only-key SIM_ENABLED=false
+python -m unittest backend.test_live
 ```
 
-Replace COM5 with the RX port. Leave the sensing area empty for the first eight
-seconds. Per-frame normalized CSI amplitude is measured over a one-second window;
-mean subcarrier standard deviation becomes the activity score. The threshold is
-baseline mean + 4 standard deviations. Both score and threshold use x/(1+x) to
-fit the existing 0..1 event contract. This measures movement, not reliable stationary
-person presence. Use --k 6 to reduce sensitivity or --k 3 to increase it.
+## 2. Sensor (optional, ESP32 — not required for dashboard Live Mode)
 
-The headless detector publishes ACTIVITY_LEVEL twice per second and detected/cleared
-transitions. HTTP runs on a separate thread. On reconnection it publishes the current
-status instead of replaying old movement. After CSI interruption it recalibrates.
+Flash TX/RX as described in `sensing/processing/README.md`. Close the serial monitor.
 
-## 3. React (another terminal)
+```bash
+python -m pip install -r sensing/processing/python/requirements.txt
+export SENSOR_INGEST_KEY='replace-with-your-local-secret'
+python sensing/processing/python/csi_stream.py --port /dev/cu.usbserial-XXXX
+```
 
-Set these values in frontend/.env.local, retaining any unrelated existing settings:
+PowerShell uses `COM5` in place of the cu.usbserial device.
+
+Leave the sensing area empty for the first eight seconds. Per-frame normalized CSI amplitude is measured over a one-second window; mean subcarrier standard deviation becomes the activity score. The threshold is baseline mean + 4 standard deviations. Both score and threshold use `x/(1+x)` to fit the 0..1 event contract. This measures movement, not reliable stationary person presence. Use `--k 6` to reduce sensitivity or `--k 3` to increase it.
+
+The headless detector publishes `ACTIVITY_LEVEL` twice per second and detected/cleared transitions with `method: wifi_csi`. HTTP runs on a separate thread. On reconnection it publishes the current status instead of replaying old movement. After CSI interruption it recalibrates.
+
+Until this process is posting events, the dashboard must **not** be described as a hardware CSI demo. Backend default `sensor.method` is `wifi_csi` even with no samples; the UI labels that state as waiting for samples, not a live CSI reading.
+
+## 3. React (Live Mode, auth disabled)
+
+Set these values in `frontend/.env` (or `.env.local`), retaining any unrelated existing settings. Restart `npm run dev` after changes. Never put `SENSOR_INGEST_KEY` in frontend env.
 
 ```dotenv
 VITE_DEMO_MODE=false
@@ -48,15 +68,35 @@ VITE_API_URL=http://localhost:8000
 VITE_WS_URL=ws://localhost:8000/ws
 ```
 
-```powershell
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Open http://localhost:5173/dashboard. Confirm Wi-Fi CSI, Sensor connected, changing
-Activity score, and Active/Idle. Movement during ASSEMBLE creates one warning per
-machine cycle; movement in other stages creates an informational alert. Unplug RX:
-within five seconds Sensor disconnected is shown and Active is cleared. Reconnect
-the detector and keep the area empty for recalibration. Stop/restart the backend:
-React reconnects and the detector resends its current status.
+Open http://localhost:5173/dashboard.
+
+### Verified with the machine simulator only
+
+- Header **LIVE** (backend WebSocket), company Demo Manufacturing, user **Dev User**.
+- Machine card **Simulated machine**, `PICK → MOVE → ASSEMBLE → RETURN` from in-process sim (`machine.simulated: true`).
+- Sensor **disconnected** until ingest; score is not a live CSI value.
+- Timeline shows `STEP_STARTED` / `STEP_COMPLETED`.
+- Acknowledge uses `POST /api/alerts/{id}/ack`. Voice stays disabled (`voice_enabled: false`).
+- Stopping the backend: **RECONNECTING** / **OFFLINE**. Dashboard does not switch to DemoSource.
+
+### Only if `csi_stream.py` is actually running against RX
+
+- Chart/method **Wi-Fi CSI**, Sensor connected, changing activity score.
+- Movement during ASSEMBLE: one `ACTIVITY_REVIEW` warning per cycle; other steps: `ACTIVITY_INFO`.
+- Unplug RX: within five seconds **Sensor disconnected**, Active cleared. Header can stay **LIVE**.
+
+If any of those hardware checks fail, say so. Do not claim ESP32 end-to-end from the simulator-only path.
+
+## 4. What this backend does not provide
+
+- Auth0 / Bearer JWT
+- `POST /api/alerts/{id}/voice` and `/explain` (404, not contract 501)
+- `GET /api/metrics/step-durations`
+- `STEP_DELAY` / `STEP_FAILURE` (sim always completes on expected duration)
+- `/api/console/*` (frontend Console stays on in-memory mocks)

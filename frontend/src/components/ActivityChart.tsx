@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import type { Method } from "../types/contract";
+import { sensorMethodLabel } from "../lib/sensorLabel";
 import type { ActivitySample } from "../state/streamReducer";
 import { DEFAULT_THRESHOLD } from "../state/streamReducer";
 import styles from "./ActivityChart.module.css";
@@ -24,8 +25,7 @@ interface Props {
 export function ActivityChart({ samples, method, connected, backendLive }: Props) {
   const now = Date.now();
   const threshold = samples[samples.length - 1]?.threshold ?? DEFAULT_THRESHOLD;
-  const methodLabel =
-    method === "simulated" ? "Simulated sensor" : method === "wifi_csi" ? "Wi-Fi CSI" : "Sensor activity";
+  const methodLabel = sensorMethodLabel(method, samples.length > 0);
   const data = samples.map((sample) => ({
     t: sample.t,
     score: Number(sample.score.toFixed(3)),

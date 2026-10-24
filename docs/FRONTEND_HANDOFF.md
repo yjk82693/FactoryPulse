@@ -61,7 +61,7 @@ App root: `frontend/`. Dev server: `http://localhost:5173`. Backend (Live): `htt
 - `useFactoryStream` + `streamReducer` hold connection status, ready identity, State, events, alerts.
 - `DataSource` interface:
   - **DemoSource** — local contract-valid simulation. Zero network.
-  - **LiveSource** — `GET /api/state` then WebSocket `/ws`. Never falls back to demo data.
+  - **LiveSource** — `GET /api/state` then WebSocket `/ws`, plus `/api/me` and `POST /api/alerts/{id}/ack`. Never falls back to demo data. Local FastAPI in `backend/` is auth-disabled in-memory only (`docs/live-csi.md`).
 - Console modules use a separate `ConsoleStore` (`frontend/src/console/`) with `MemoryConsoleStore`. Do not merge this into `streamReducer`. Proposed HTTP resources are in `docs/PROPOSED_CONSOLE_API.md` (not Contract v1.2).
 
 ### Major UI components

@@ -23,6 +23,13 @@ describe("ActivityChart", () => {
     expect(screen.getByText("Wi-Fi CSI · last 120s")).toBeInTheDocument();
   });
 
+  it("does not title an empty chart as Wi-Fi CSI", () => {
+    render(<ActivityChart samples={[]} method="wifi_csi" connected={false} backendLive />);
+    expect(screen.getByText("Waiting for sensor samples · last 120s")).toBeInTheDocument();
+    expect(screen.getByText("Waiting for activity samples")).toBeInTheDocument();
+    expect(screen.queryByText("Wi-Fi CSI · last 120s")).not.toBeInTheDocument();
+  });
+
   it("does not use the sensor-disconnected badge when the backend itself is down", () => {
     render(
       <ActivityChart samples={samples} method="wifi_csi" connected backendLive={false} />,

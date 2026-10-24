@@ -29,8 +29,10 @@ describe("ActivityIndicator", () => {
   });
 
   it("omits last-update time when last_update_at is missing or invalid", () => {
-    const sensor = { ...makeState().sensor, last_update_at: null, connected: false };
+    const sensor = { ...makeState().sensor, last_update_at: null, connected: false, method: "wifi_csi" as const };
     render(<ActivityIndicator sensor={sensor} backendLive />);
     expect(screen.queryByText(/Updated /)).not.toBeInTheDocument();
+    expect(screen.getByText("Waiting for sensor samples")).toBeInTheDocument();
+    expect(screen.queryByText("Wi-Fi CSI")).not.toBeInTheDocument();
   });
 });

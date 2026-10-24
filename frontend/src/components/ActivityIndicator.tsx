@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { State } from "../types/contract";
+import { sensorMethodLabel } from "../lib/sensorLabel";
 import { parseValidTimestamp, relativeTime } from "../lib/time";
 import styles from "./ActivityIndicator.module.css";
 
@@ -19,7 +20,7 @@ export function ActivityIndicator({ sensor, backendLive }: Props) {
     return () => clearInterval(timer);
   }, [updatedAt]);
 
-  const methodLabel = sensor.method === "simulated" ? "Simulated sensor" : "Wi-Fi CSI";
+  const methodLabel = sensorMethodLabel(sensor.method, updatedAt !== null);
   const fresh = backendLive && sensor.connected;
   const activity = sensor.active ? "Active" : "Idle";
   const link = !backendLive

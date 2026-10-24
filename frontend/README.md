@@ -18,7 +18,7 @@ App: http://localhost:5173
 - `/optimizer` example factory layout optimizer (not CSI coordinates)  
 - `/optimizer/sensors` illustrative sensor-placement comparison  
 - `/machines`, `/profiles`, `/simulator`, `/sensors` mock console (in-memory, not Contract v1.2)  
-Backend (Live Mode, **pending Developer B**): http://localhost:8000
+Backend (Live Mode): http://localhost:8000 — setup in [`docs/live-csi.md`](../docs/live-csi.md). Console pages stay on in-memory mocks.
 
 Hackathon walkthrough and ESP32/API fallback: [`docs/DEMO.md`](../docs/DEMO.md).
 
@@ -128,15 +128,15 @@ Frontend `redirect_uri` is `window.location.origin` (`http://localhost:5173`). A
 
 **Judges / no hardware:** keep `VITE_DEMO_MODE=true`. The dashboard uses local DemoSource only (`Simulated sensor`). The optimizer uses a local example floor. See `docs/DEMO.md`.
 
-**Live CSI (only after B’s API and ingest exist):** `VITE_DEMO_MODE=false` with matching `AUTH_DISABLED`. The UI already renders `method: "wifi_csi"` and last-known state on disconnect. It does **not** read ESP32 serial. Header LIVE/RECONNECTING/OFFLINE is **backend** connectivity; **Sensor disconnected** is a missing sensor stream while the API is up. Cached scores are labeled stale.
+**Live dashboard (local FastAPI, auth disabled):** `VITE_DEMO_MODE=false` with matching `AUTH_DISABLED=true`. Uses `GET /api/state`, `/api/me`, ack, and `/ws`. It does **not** read ESP32 serial. Header LIVE/RECONNECTING/OFFLINE is **backend** connectivity; **Sensor disconnected** is a missing sensor stream while the API is up. Cached scores are labeled stale. Voice is hidden while `voice_enabled` is false. This backend does not implement Auth0.
 
 ## Honest status
 
 | | |
 |---|---|
-| Verified | Demo dashboard, optimizer example, unit tests, build, Auth0 login redirect |
-| Implemented, not E2E | LiveSource, voice button against real MP3, Auth0 access token vs API |
-| Pending | `backend/`, `POST /api/events` from CSI |
-| Simulated | DemoSource, optimizer scenario |
+| Verified | Demo dashboard, optimizer example, unit tests, build, Auth0 login redirect, Live Mode REST+WS against local FastAPI (auth disabled, no ESP32) |
+| Implemented, not hardware E2E | `wifi_csi` labels, voice button against real MP3, Auth0 access token vs API |
+| Pending | Auth0 on B’s server, ElevenLabs/Gemini endpoints, ESP32 serial ingest |
+| Simulated | DemoSource, Live machine sim, optimizer scenario, mock Console |
 
 Prototype only: the machine is simulated. Wi-Fi CSI activity is an operational observation, not certified safety monitoring.

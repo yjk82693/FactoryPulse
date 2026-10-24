@@ -99,6 +99,41 @@ describe("LiveSource", () => {
     source.stop();
   });
 
+  it("loads /api/me and acknowledges via POST /api/alerts/{id}/ack", async () => {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const path = String(url);
+      if (path.endsWith("/api/state")) {
+        return jsonResponse(makeState());
+      }
+      if (path.endsWith("/api/me")) {
+        return jsonResponse({
+          user: { id: "dev-user", name: "Dev User", email: null },
+          company: { id: "demo-co", name: "Demo Manufacturing" },
+          role: "supervisor",
+        });
+      }
+      if (path.includes("/api/alerts/") && path.endsWith("/ack") && init?.method === "POST") {
+        return jsonResponse(makeAlert({ acknowledged: true, acknowledged_by: "dev-user" }));
+      }
+      return jsonResponse({ detail: "missing", code: "not_found" }, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const source = new LiveSource({
+      apiUrl: "http://localhost:8000",
+      wsUrl: "ws://localhost:8000/ws",
+      authDisabled: true,
+      webSocketCtor: FakeSocketCtor,
+    });
+    source.start();
+    await expect(source.fetchMe()).resolves.toMatchObject({ role: "supervisor", user: { id: "dev-user" } });
+    await expect(source.acknowledge("11111111-1111-4111-8111-111111111111")).resolves.toMatchObject({
+      acknowledged: true,
+      acknowledged_by: "dev-user",
+    });
+    expect(fetchMock.mock.calls.some(([url, init]) => String(url).endsWith("/api/alerts/11111111-1111-4111-8111-111111111111/ack") && init?.method === "POST")).toBe(true);
+    source.stop();
+  });
+
   it("maps 401 and 403 from GET /api/state", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 403 })));
     const forbidden = new LiveSource({
