@@ -1,0 +1,146 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: var(--bg-app);
+}
+
+.banner {
+  margin: 0;
+  padding: 8px var(--space-4);
+  background: rgba(245, 158, 11, 0.12);
+  color: #f3de9b;
+  font-size: 12px;
+  font-weight: 600;
+  border-bottom: 1px solid #6d5a22;
+}
+
+.sub {
+  display: flex;
+  gap: 4px;
+  padding: 0 12px;
+}
+
+.subLink {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-bottom: 2px solid transparent;
+}
+
+.subActive {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent-primary);
+}
+
+.main {
+  flex: 1;
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.2fr);
+  gap: 12px;
+}
+
+.list {
+  display: grid;
+  gap: 8px;
+}
+
+.row {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-app);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rowActive {
+  border-color: var(--accent-primary);
+}
+
+.form {
+  display: grid;
+  gap: 8px;
+}
+
+.form label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.form input,
+.form select {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.primary,
+.danger,
+.ghost {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  font-weight: 650;
+}
+
+.primary {
+  background: var(--accent-primary);
+  color: #101214;
+  border: none;
+}
+
+.danger {
+  background: transparent;
+  color: var(--status-critical);
+  border: 1px solid var(--status-critical);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+}
+
+.warn {
+  color: var(--status-warning);
+  font-size: 13px;
+  margin: 0;
+}
+
+.meta {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.empty {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+@media (max-width: 1100px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+}

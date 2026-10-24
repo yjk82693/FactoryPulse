@@ -96,7 +96,15 @@ export function DashboardPage() {
   }
 
   const method = stream.state?.sensor.method ?? null;
-  const connected = stream.state?.sensor.connected ?? true;
+  const connected = stream.state?.sensor.connected ?? false;
+  const backendLive = stream.status === "live" || stream.status === "demo";
+  const connectionNote =
+    stream.status === "connecting" && !stream.state
+      ? (stream.statusDetail ?? "Connecting to FactoryPulse…")
+      : stream.statusDetail &&
+          (stream.status === "reconnecting" || stream.status === "offline" || stream.status === "error")
+        ? stream.statusDetail
+        : null;
 
   return (
     <div className={styles.shell}>
@@ -109,10 +117,7 @@ export function DashboardPage() {
         demoMode={config.demoMode}
       />
       <main className={styles.dashboard}>
-        {stream.statusDetail &&
-        (stream.status === "reconnecting" || stream.status === "offline" || stream.status === "error") ? (
-          <div className={styles.statusNote}>{stream.statusDetail}</div>
-        ) : null}
+        {connectionNote ? <div className={styles.statusNote}>{connectionNote}</div> : null}
         <div className={styles.left}>
           <div className={styles.machineCard}>
             {stream.state ? (
@@ -128,7 +133,7 @@ export function DashboardPage() {
           </div>
           <div className={styles.activityIndicator}>
             {stream.state ? (
-              <ActivityIndicator sensor={stream.state.sensor} />
+              <ActivityIndicator sensor={stream.state.sensor} backendLive={backendLive} />
             ) : (
               <section className="panel">
                 <div className="panel-title">Activity score</div>
@@ -148,11 +153,17 @@ export function DashboardPage() {
             ) : (
               <section className="panel">
                 <div className="panel-title">Workflow</div>
+                <p className="panel-subtitle">Waiting for machine workflow.</p>
               </section>
             )}
           </div>
           <div className={styles.activityChart}>
-            <ActivityChart samples={stream.samples} method={method} connected={connected} />
+            <ActivityChart
+              samples={stream.samples}
+              method={method}
+              connected={connected}
+              backendLive={backendLive}
+            />
           </div>
         </div>
         <div className={styles.right}>

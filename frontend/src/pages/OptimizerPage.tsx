@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getConfig } from "../config";
 import { useAccessToken } from "../auth/useAccessToken";
+import { OptimizerSubnav } from "../components/console/ConsoleChrome";
 import { Header } from "../components/Header";
 import { CostSummary } from "../components/optimizer/CostSummary";
 import { FloorGrid } from "../components/optimizer/FloorGrid";
@@ -84,6 +85,7 @@ export function OptimizerPage() {
         Simulated example floor and directed flow matrix. Workstation coordinates and travel distances are
         not measured from Wi-Fi CSI and are independent of the live assembly-cell stream.
       </p>
+      <OptimizerSubnav />
       <main className={styles.main}>
         {scenario ? (
           <>

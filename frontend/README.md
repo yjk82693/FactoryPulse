@@ -15,7 +15,12 @@ App: http://localhost:5173
 - `/` public landing page  
 - `/login` Auth0 entry (or local continue when auth is disabled)  
 - `/dashboard` assembly cell dashboard  
-Backend (Live Mode): http://localhost:8000
+- `/optimizer` example factory layout optimizer (not CSI coordinates)  
+- `/optimizer/sensors` illustrative sensor-placement comparison  
+- `/machines`, `/profiles`, `/simulator`, `/sensors` mock console (in-memory, not Contract v1.2)  
+Backend (Live Mode, **pending Developer B**): http://localhost:8000
+
+Hackathon walkthrough and ESP32/API fallback: [`docs/DEMO.md`](../docs/DEMO.md).
 
 ```bash
 npx tsc --noEmit
@@ -117,6 +122,21 @@ Do this in the Auth0 Dashboard. Do not put a Client Secret in `.env`.
 6. Enable Universal Login. Create a test user if the tenant has no connections yet (Username-Password or a social connection).
 7. For local Auth0 UI testing: `VITE_DEMO_MODE=true` and `VITE_AUTH_DISABLED=false`. Explore Demo still works without login. Get Started / Continue with Auth0 exercises Universal Login.
 
-Frontend redirect_uri is `window.location.origin` (`http://localhost:5173`). After login, the app navigates to `/dashboard`. Logout `returnTo` is `http://localhost:5173`. Access tokens stay in memory; they are not written to localStorage.
+Frontend `redirect_uri` is `window.location.origin` (`http://localhost:5173`). After login, the app navigates to `appState.returnTo` or `/dashboard`. Logout `returnTo` is `http://localhost:5173`. Access tokens stay in memory; they are not written to localStorage.
+
+## Demo fallback vs live CSI
+
+**Judges / no hardware:** keep `VITE_DEMO_MODE=true`. The dashboard uses local DemoSource only (`Simulated sensor`). The optimizer uses a local example floor. See `docs/DEMO.md`.
+
+**Live CSI (only after B’s API and ingest exist):** `VITE_DEMO_MODE=false` with matching `AUTH_DISABLED`. The UI already renders `method: "wifi_csi"` and last-known state on disconnect. It does **not** read ESP32 serial. Header LIVE/RECONNECTING/OFFLINE is **backend** connectivity; **Sensor disconnected** is a missing sensor stream while the API is up. Cached scores are labeled stale.
+
+## Honest status
+
+| | |
+|---|---|
+| Verified | Demo dashboard, optimizer example, unit tests, build, Auth0 login redirect |
+| Implemented, not E2E | LiveSource, voice button against real MP3, Auth0 access token vs API |
+| Pending | `backend/`, `POST /api/events` from CSI |
+| Simulated | DemoSource, optimizer scenario |
 
 Prototype only: the machine is simulated. Wi-Fi CSI activity is an operational observation, not certified safety monitoring.

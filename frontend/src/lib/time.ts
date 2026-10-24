@@ -1,5 +1,17 @@
+export function parseValidTimestamp(iso: string | null | undefined): number | null {
+  if (!iso || iso.trim().length === 0) {
+    return null;
+  }
+  const value = Date.parse(iso);
+  return Number.isFinite(value) ? value : null;
+}
+
 export function relativeTime(iso: string, now = Date.now()): string {
-  const delta = Math.max(0, now - Date.parse(iso));
+  const parsed = parseValidTimestamp(iso);
+  if (parsed === null) {
+    return "";
+  }
+  const delta = Math.max(0, now - parsed);
   const seconds = Math.floor(delta / 1000);
   if (seconds < 60) {
     return `${seconds}s ago`;
