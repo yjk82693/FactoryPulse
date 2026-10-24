@@ -11,7 +11,8 @@ Prototype only. The assembly machine is simulated. Wi-Fi CSI is an operational o
 | **Verified (this frontend)** | Landing, login entry, Demo Mode dashboard, alerts + local ack, layout optimizer with example data, connection/stale UI, Auth0 Universal Login redirect (callback/JWT vs API not fully verified) |
 | **Verified against B’s local FastAPI (no ESP32)** | Live Mode `GET /api/state`, `/api/me`, `/api/events`, `/api/alerts`, `POST /api/alerts/{id}/ack`, WebSocket `/ws` (`ready` then `state`). Machine sim on dashboard. See `docs/live-csi.md`. |
 | **Implemented, not hardware E2E** | `method: wifi_csi` labeling, CSI ingest client `csi_stream.py`, ElevenLabs voice **UI**, Gemini explain **UI** (facts vs interpretations vs checks) |
-| **Pending B** | `/api/console/*`, Auth0 JWT on FastAPI, voice/explain **routes** (UI handles 501), Tiger Data |
+| **Pending B** | `/api/console/*`, Auth0 JWT on FastAPI, Tiger Data |
+| **Voice/explain backend** | C-owned `backend/ai/` routes: 501 without server keys; 200 when Gemini/ElevenLabs env is set (mocked in tests) |
 | **Pending A** | ESP32 serial → dashboard (needs flashed RX + `csi_stream.py`) |
 | **Simulated / example** | DemoSource; Live machine sim (`machine.simulated`). Optimizer floor. Console mocks unless `VITE_CONSOLE_HTTP=true` and B’s API is up |
 

@@ -2,9 +2,9 @@
 
 Contract: [`docs/event-schema.md`](event-schema.md) **v1.3** (live ingest unchanged from v1.2). `/api/console/*` is specified, not implemented.
 
-The existing React `LiveSource` consumes Developer B’s FastAPI backend without swapping in Demo data. The **machine is always simulated**. Sensor readings come from `POST /api/events` (ESP32 RX via `csi_stream.py`, or a contract-valid test ingest). This backend is local, single-company, in-memory only. Auth0, database, ElevenLabs, and Gemini are **not implemented**. Keep the server bound to localhost.
+The existing React `LiveSource` consumes Developer B’s FastAPI backend without swapping in Demo data. The **machine is always simulated**. Sensor readings come from `POST /api/events` (ESP32 RX via `csi_stream.py`, or a contract-valid test ingest). This backend is local, single-company, in-memory only. Auth0, database, and `/api/console/*` are **not implemented**. Gemini explain and ElevenLabs voice live in isolated C-owned modules (`backend/ai/`) and return **501** when keys are unset. Keep the server bound to localhost.
 
-**Verified 2026-10-24 (no ESP32 hardware):** REST (`/health`, `/api/me`, `/api/state`, `/api/events`, `/api/alerts`, `POST /api/alerts/{id}/ack`) and WebSocket `/ws` (`ready` then `state`) against `2364894` with `AUTH_DISABLED=true` and `SIM_ENABLED=true`. Activity was injected as a **synthetic HTTP** `ACTIVITY_DETECTED` (`method: simulated`), not from serial CSI. Voice `POST /api/alerts/{id}/voice` returns **404** (not implemented).
+**Verified 2026-10-24 (no ESP32 hardware):** REST (`/health`, `/api/me`, `/api/state`, `/api/events`, `/api/alerts`, `POST /api/alerts/{id}/ack`) and WebSocket `/ws` (`ready` then `state`) against `2364894` with `AUTH_DISABLED=true` and `SIM_ENABLED=true`. Activity was injected as a **synthetic HTTP** `ACTIVITY_DETECTED` (`method: simulated`), not from serial CSI. Voice `POST /api/alerts/{id}/voice` and explain return **501** when ElevenLabs/Gemini env is unset (not 404).
 
 ## 1. Backend (from FactoryTetris)
 
@@ -98,7 +98,7 @@ If any of those hardware checks fail, say so. Do not claim ESP32 end-to-end from
 ## 4. What this backend does not provide
 
 - Auth0 / Bearer JWT
-- `POST /api/alerts/{id}/voice` and `/explain` (404, not contract 501)
+- `/api/console/*` (frontend Console stays on in-memory mocks; keep `VITE_CONSOLE_HTTP=false` until B ships catalog)
+- Real Gemini/ElevenLabs calls until server env keys are set (unset → 501, never in the browser)
 - `GET /api/metrics/step-durations`
 - `STEP_DELAY` / `STEP_FAILURE` (sim always completes on expected duration)
-- `/api/console/*` (frontend Console stays on in-memory mocks)
