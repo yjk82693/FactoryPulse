@@ -1,0 +1,23 @@
+.wrap {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.title {
+  margin-bottom: var(--space-3);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-3);
+  overflow: auto;
+  max-height: 280px;
+  padding-right: 2px;
+}
+
+.empty {
+  color: var(--text-secondary);
+  font-size: 14px;
+}

@@ -1,0 +1,87 @@
+.card {
+  height: 100%;
+}
+
+.kicker {
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.status {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+.step {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--accent-primary);
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.meta label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.meta strong {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sim {
+  margin-top: var(--space-4);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.bar {
+  margin-top: var(--space-3);
+  height: 8px;
+  background: var(--bg-elevated);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  background: var(--accent-primary);
+  transition: width var(--transition-fast);
+}
+
+.over {
+  background: var(--status-warning);
+}
+
+@media (max-width: 768px) {
+  .status {
+    font-size: 28px;
+  }
+  .step {
+    font-size: 22px;
+  }
+  .meta {
+    grid-template-columns: 1fr;
+  }
+}

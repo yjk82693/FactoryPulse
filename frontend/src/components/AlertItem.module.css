@@ -1,0 +1,72 @@
+.item {
+  border: 1px solid var(--border-default);
+  border-left-width: 4px;
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--bg-app);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.info {
+  border-left-color: var(--status-info);
+}
+
+.warning {
+  border-left-color: var(--status-warning);
+}
+
+.critical {
+  border-left-color: var(--status-critical);
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.sev {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.message {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.meta {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.ack {
+  background: var(--accent-soft);
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-weight: 600;
+  font-size: 13px;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.ack:hover:not(:disabled) {
+  color: var(--accent-primary-hover);
+}
+
+.ack:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

@@ -1,0 +1,65 @@
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 20px;
+  padding: var(--space-5);
+  align-items: stretch;
+}
+
+.statusNote {
+  grid-column: 1 / -1;
+  color: var(--status-warning);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.machineCard {
+  grid-column: span 4;
+  min-width: 0;
+}
+
+.workflowCard {
+  grid-column: span 8;
+  min-width: 0;
+}
+
+.activityChart {
+  grid-column: span 7;
+  min-width: 0;
+}
+
+.activityIndicator {
+  grid-column: span 2;
+  min-width: 0;
+}
+
+.alertPanel {
+  grid-column: span 3;
+  min-width: 0;
+}
+
+.eventTimeline {
+  grid-column: span 12;
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .machineCard,
+  .workflowCard,
+  .activityChart,
+  .activityIndicator,
+  .alertPanel {
+    grid-column: span 6;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    padding: var(--space-3);
+  }
+
+  .dashboard > * {
+    grid-column: 1 / -1;
+  }
+}
