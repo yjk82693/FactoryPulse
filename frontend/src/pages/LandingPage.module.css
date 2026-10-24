@@ -10,8 +10,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(56, 189, 248, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56, 189, 248, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(34, 211, 238, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.04) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse at top, #000 40%, transparent 75%);
 }
@@ -101,7 +101,7 @@
 
 .primary {
   background: var(--accent-primary);
-  color: #082f49;
+  color: #101214;
 }
 
 .primary:hover {

@@ -1,6 +1,14 @@
+import { useState } from "react";
 import type { Alert } from "../types/contract";
 import { AlertItem } from "./AlertItem";
 import styles from "./AlertPanel.module.css";
+
+const PREVIEW_OPEN = 3;
+const SEVERITY_RANK: Record<Alert["severity"], number> = {
+  critical: 0,
+  warning: 1,
+  info: 2,
+};
 
 interface Props {
   alerts: Alert[];
@@ -11,22 +19,31 @@ interface Props {
 }
 
 export function AlertPanel({ alerts, voiceEnabled, fetchVoice, onAcknowledge, pendingId }: Props) {
+  const [expanded, setExpanded] = useState(false);
   const open = alerts
     .filter((item) => !item.acknowledged)
-    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-  const rest = alerts
+    .sort((a, b) => {
+      const rank = SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
+      if (rank !== 0) {
+        return rank;
+      }
+      return a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0;
+    });
+  const acknowledged = alerts
     .filter((item) => item.acknowledged)
-    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-  const ordered = [...open, ...rest];
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
+  const preview = open.slice(0, PREVIEW_OPEN);
+  const visible = expanded ? [...open, ...acknowledged] : preview;
+  const hiddenCount = alerts.length - visible.length;
 
   return (
     <section className={`panel ${styles.wrap}`}>
       <div className={`panel-title ${styles.title}`}>Operational alerts · {open.length} open</div>
-      {ordered.length === 0 ? (
-        <div className={styles.empty}>No alerts</div>
+      {visible.length === 0 ? (
+        <div className={styles.empty}>{alerts.length === 0 ? "No alerts" : "No open alerts"}</div>
       ) : (
         <div className={styles.list}>
-          {ordered.map((alert) => (
+          {visible.map((alert) => (
             <AlertItem
               key={alert.alert_id}
               alert={alert}
@@ -38,6 +55,15 @@ export function AlertPanel({ alerts, voiceEnabled, fetchVoice, onAcknowledge, pe
           ))}
         </div>
       )}
+      {hiddenCount > 0 || expanded ? (
+        <button
+          className={styles.more}
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+        >
+          {expanded ? "Show less" : `Show ${hiddenCount} more`}
+        </button>
+      ) : null}
     </section>
   );
 }

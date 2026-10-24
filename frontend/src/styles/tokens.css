@@ -1,29 +1,29 @@
 :root {
-  --bg-app: #0b1120;
-  --bg-sidebar: #0f172a;
-  --bg-surface: #151f32;
-  --bg-surface-hover: #1c2940;
-  --bg-elevated: #223149;
+  --bg-app: #101214;
+  --bg-sidebar: #16181d;
+  --bg-surface: #1a1d23;
+  --bg-surface-hover: #22262e;
+  --bg-elevated: #262b34;
 
-  --border-default: #2b3b52;
-  --border-subtle: #233247;
+  --border-default: #323844;
+  --border-subtle: #2a2f38;
 
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-primary: #e8eaed;
+  --text-secondary: #9aa3ad;
+  --text-muted: #6d7580;
 
-  --accent-primary: #38bdf8;
-  --accent-primary-hover: #7dd3fc;
-  --accent-soft: rgba(56, 189, 248, 0.12);
+  --accent-primary: #22d3ee;
+  --accent-primary-hover: #67e8f9;
+  --accent-soft: rgba(34, 211, 238, 0.12);
 
   --status-success: #22c55e;
   --status-warning: #f59e0b;
   --status-critical: #ef4444;
-  --status-info: #3b82f6;
+  --status-info: #22d3ee;
 
   --radius-sm: 6px;
   --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-lg: 12px;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -38,5 +38,6 @@
 
   --font: "Inter", "Segoe UI", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, monospace;
-  --header-h: 56px;
+  --header-h: 48px;
+  --footer-h: 32px;
 }

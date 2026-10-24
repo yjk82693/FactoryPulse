@@ -1,65 +1,146 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  background: var(--bg-app);
+}
+
 .dashboard {
+  flex: 1;
+  min-height: 0;
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 20px;
-  padding: var(--space-5);
-  align-items: stretch;
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(300px, 360px);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
 }
 
 .statusNote {
   grid-column: 1 / -1;
+  grid-row: 1;
   color: var(--status-warning);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
+}
+
+.left,
+.center,
+.right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  grid-row: 2;
+}
+
+.left {
+  grid-column: 1;
+}
+
+.center {
+  grid-column: 2;
+}
+
+.right {
+  grid-column: 3;
+}
+
+.machineCard,
+.activityIndicator {
+  min-height: 0;
 }
 
 .machineCard {
-  grid-column: span 4;
-  min-width: 0;
-}
-
-.workflowCard {
-  grid-column: span 8;
-  min-width: 0;
-}
-
-.activityChart {
-  grid-column: span 7;
-  min-width: 0;
+  flex: 0 0 auto;
 }
 
 .activityIndicator {
-  grid-column: span 2;
-  min-width: 0;
+  flex: 0 0 auto;
+}
+
+.workflowCard {
+  flex: 0 0 auto;
+}
+
+.activityChart {
+  flex: 1 1 auto;
+  min-height: 240px;
+}
+
+.alertPanel,
+.eventTimeline {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .alertPanel {
-  grid-column: span 3;
-  min-width: 0;
+  flex: 1.15 1 0;
 }
 
 .eventTimeline {
-  grid-column: span 12;
-  min-width: 0;
+  flex: 0.85 1 0;
 }
 
-@media (max-width: 1100px) {
+.machineCard > *,
+.activityIndicator > *,
+.workflowCard > *,
+.activityChart > *,
+.alertPanel > *,
+.eventTimeline > * {
+  height: 100%;
+  min-height: 0;
+}
+
+@media (max-width: 1439px) {
+  .dashboard {
+    grid-template-columns: minmax(200px, 240px) minmax(0, 1fr) minmax(280px, 320px);
+  }
+
+  .activityChart {
+    min-height: 200px;
+  }
+}
+
+@media (max-width: 1279px) {
+  .shell {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .dashboard {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+
+  .left,
+  .center,
+  .right {
+    display: contents;
+  }
+
   .machineCard,
   .workflowCard,
   .activityChart,
   .activityIndicator,
-  .alertPanel {
-    grid-column: span 6;
+  .alertPanel,
+  .eventTimeline {
+    min-height: unset;
+  }
+
+  .activityChart {
+    min-height: 280px;
   }
 }
 
 @media (max-width: 768px) {
   .dashboard {
-    grid-template-columns: 1fr;
     padding: var(--space-3);
-  }
-
-  .dashboard > * {
-    grid-column: 1 / -1;
   }
 }

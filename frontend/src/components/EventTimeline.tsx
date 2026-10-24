@@ -7,17 +7,22 @@ interface Props {
   events: Event[];
 }
 
+const PREVIEW = 6;
+
 export function EventTimeline({ events }: Props) {
   const [source, setSource] = useState<EventSourceKind | "all">("all");
+  const [expanded, setExpanded] = useState(false);
   const filtered = useMemo(
     () => (source === "all" ? events : events.filter((event) => event.source === source)),
     [events, source],
   );
+  const visible = expanded ? filtered : filtered.slice(0, PREVIEW);
+  const hiddenCount = filtered.length - visible.length;
 
   return (
     <section className={`panel ${styles.wrap}`}>
       <div className={styles.head}>
-        <div className="panel-title">Event timeline</div>
+        <div className="panel-title">Recent events</div>
         <select
           className={styles.select}
           value={source}
@@ -30,7 +35,7 @@ export function EventTimeline({ events }: Props) {
         </select>
       </div>
       <div className={styles.list}>
-        {filtered.map((event) => (
+        {visible.map((event) => (
           <div key={event.event_id} className={styles.row} title={`${event.timestamp} UTC`}>
             <span className={styles.time}>{localTime(event.timestamp)}</span>
             <span className={styles.source}>{event.source}</span>
@@ -38,6 +43,11 @@ export function EventTimeline({ events }: Props) {
           </div>
         ))}
       </div>
+      {hiddenCount > 0 || expanded ? (
+        <button className={styles.more} type="button" onClick={() => setExpanded((value) => !value)}>
+          {expanded ? "Show less" : `Show ${hiddenCount} more`}
+        </button>
+      ) : null}
     </section>
   );
 }

@@ -19,7 +19,7 @@ export function MachineStatusCard({ machine }: { machine: State["machine"] }) {
     <section className={`panel ${styles.card}`}>
       <div className={styles.kicker}>Assembly cell · {machine.machine_id}</div>
       <div className={styles.row}>
-        <div className={styles.status}>{machine.status}</div>
+        <div className={`${styles.status} ${styles[machine.status]}`}>{machine.status}</div>
         <div className={styles.step}>{machine.current_step ?? "—"}</div>
       </div>
       <div className={styles.meta}>

@@ -5,7 +5,6 @@ import { useAccessToken } from "../auth/useAccessToken";
 import { DemoSource } from "../data/DemoSource";
 import { LiveSource } from "../data/LiveSource";
 import { useFactoryStream } from "../hooks/useFactoryStream";
-import { DemoBanner } from "../components/DemoBanner";
 import { Header } from "../components/Header";
 import { MachineStatusCard } from "../components/MachineStatusCard";
 import { WorkflowStepper } from "../components/WorkflowStepper";
@@ -100,80 +99,86 @@ export function DashboardPage() {
   const connected = stream.state?.sensor.connected ?? true;
 
   return (
-    <>
-      {config.demoMode ? <DemoBanner /> : null}
+    <div className={styles.shell}>
       <Header
         companyName={companyName}
         userName={resolvedUser}
         role={role}
         status={stream.status}
         statusDetail={stream.statusDetail}
+        demoMode={config.demoMode}
       />
       <main className={styles.dashboard}>
         {stream.statusDetail &&
         (stream.status === "reconnecting" || stream.status === "offline" || stream.status === "error") ? (
           <div className={styles.statusNote}>{stream.statusDetail}</div>
         ) : null}
-        <div className={styles.machineCard}>
-          {stream.state ? (
-            <MachineStatusCard machine={stream.state.machine} />
-          ) : (
-            <section className="panel">
-              <div className="panel-title">Machine</div>
-              <p className="panel-subtitle">
-                Waiting for machine state. Last known state will remain visible if the connection drops.
-              </p>
-            </section>
-          )}
+        <div className={styles.left}>
+          <div className={styles.machineCard}>
+            {stream.state ? (
+              <MachineStatusCard machine={stream.state.machine} />
+            ) : (
+              <section className="panel">
+                <div className="panel-title">Machine</div>
+                <p className="panel-subtitle">
+                  Waiting for machine state. Last known state will remain visible if the connection drops.
+                </p>
+              </section>
+            )}
+          </div>
+          <div className={styles.activityIndicator}>
+            {stream.state ? (
+              <ActivityIndicator sensor={stream.state.sensor} />
+            ) : (
+              <section className="panel">
+                <div className="panel-title">Activity score</div>
+                <p className="panel-subtitle">Waiting for sensor state.</p>
+              </section>
+            )}
+          </div>
         </div>
-        <div className={styles.workflowCard}>
-          {stream.state ? (
-            <WorkflowStepper
-              currentStep={stream.state.machine.current_step}
-              status={stream.state.machine.status}
-              stepStartedAt={stream.state.machine.step_started_at}
+        <div className={styles.center}>
+          <div className={styles.workflowCard}>
+            {stream.state ? (
+              <WorkflowStepper
+                currentStep={stream.state.machine.current_step}
+                status={stream.state.machine.status}
+                stepStartedAt={stream.state.machine.step_started_at}
+              />
+            ) : (
+              <section className="panel">
+                <div className="panel-title">Workflow</div>
+              </section>
+            )}
+          </div>
+          <div className={styles.activityChart}>
+            <ActivityChart samples={stream.samples} method={method} connected={connected} />
+          </div>
+        </div>
+        <div className={styles.right}>
+          <div className={styles.alertPanel}>
+            <AlertPanel
+              alerts={stream.state?.alerts ?? []}
+              voiceEnabled={!config.demoMode && Boolean(stream.state?.server.voice_enabled)}
+              fetchVoice={
+                !config.demoMode && source instanceof LiveSource
+                  ? (alertId) => source.fetchVoice(alertId)
+                  : null
+              }
+              onAcknowledge={(id) => void onAcknowledge(id)}
+              pendingId={pendingId}
             />
-          ) : (
-            <section className="panel">
-              <div className="panel-title">Workflow</div>
-            </section>
-          )}
-        </div>
-        <div className={styles.activityChart}>
-          <ActivityChart samples={stream.samples} method={method} connected={connected} />
-        </div>
-        <div className={styles.activityIndicator}>
-          {stream.state ? (
-            <ActivityIndicator sensor={stream.state.sensor} />
-          ) : (
-            <section className="panel">
-              <div className="panel-title">Activity score</div>
-              <p className="panel-subtitle">Waiting for sensor state.</p>
-            </section>
-          )}
-        </div>
-        <div className={styles.alertPanel}>
-          <AlertPanel
-            alerts={stream.state?.alerts ?? []}
-            voiceEnabled={!config.demoMode && Boolean(stream.state?.server.voice_enabled)}
-            fetchVoice={
-              !config.demoMode && source instanceof LiveSource
-                ? (alertId) => source.fetchVoice(alertId)
-                : null
-            }
-            onAcknowledge={(id) => void onAcknowledge(id)}
-            pendingId={pendingId}
-          />
-        </div>
-        <div className={styles.eventTimeline}>
-          <EventTimeline events={stream.events} />
-          <StepDurationChart />
+          </div>
+          <div className={styles.eventTimeline}>
+            <EventTimeline events={stream.events} />
+            <StepDurationChart />
+          </div>
         </div>
       </main>
       <p className="disclaimer">
         Prototype only. The assembly cell is a simulated machine. Wi-Fi CSI activity is an operational
         observation for review, not certified safety monitoring, localization, or identification.
       </p>
-    </>
+    </div>
   );
 }

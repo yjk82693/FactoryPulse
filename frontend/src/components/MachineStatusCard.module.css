@@ -4,7 +4,7 @@
 
 .kicker {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -18,47 +18,64 @@
 }
 
 .status {
-  font-size: 36px;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: 0.03em;
-  line-height: 1;
+  line-height: 1.1;
+}
+
+.RUNNING {
+  color: var(--status-success);
+}
+
+.IDLE {
+  color: var(--text-secondary);
+}
+
+.FAULT {
+  color: var(--status-critical);
+}
+
+.MAINTENANCE {
+  color: var(--status-warning);
 }
 
 .step {
-  font-size: 32px;
+  font-size: 18px;
   font-weight: 700;
-  color: var(--accent-primary);
+  color: var(--text-primary);
 }
 
 .meta {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
-  margin-top: var(--space-4);
+  gap: var(--space-2);
+  margin-top: var(--space-3);
 }
 
 .meta label {
   display: block;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
 .meta strong {
-  font-size: 16px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
 }
 
 .sim {
-  margin-top: var(--space-4);
-  color: var(--text-secondary);
-  font-size: 13px;
+  margin-top: var(--space-2);
+  color: var(--status-warning);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .bar {
-  margin-top: var(--space-3);
-  height: 8px;
+  margin-top: var(--space-2);
+  height: 6px;
   background: var(--bg-elevated);
   border-radius: 99px;
   overflow: hidden;
@@ -66,7 +83,7 @@
 
 .fill {
   height: 100%;
-  background: var(--accent-primary);
+  background: var(--status-success);
   transition: width var(--transition-fast);
 }
 
@@ -76,12 +93,9 @@
 
 @media (max-width: 768px) {
   .status {
-    font-size: 28px;
+    font-size: 20px;
   }
   .step {
-    font-size: 22px;
-  }
-  .meta {
-    grid-template-columns: 1fr;
+    font-size: 16px;
   }
 }

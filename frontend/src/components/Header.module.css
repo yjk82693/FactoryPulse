@@ -3,10 +3,11 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-3) var(--space-5);
+  padding: 0 var(--space-4);
   background: var(--bg-sidebar);
   border-bottom: 1px solid var(--border-default);
   min-height: var(--header-h);
+  flex-shrink: 0;
 }
 
 .brand {
@@ -49,6 +50,12 @@
   height: 8px;
   border-radius: 50%;
   background: var(--text-muted);
+}
+
+.demoData {
+  color: var(--status-warning);
+  border-color: var(--status-warning);
+  background: rgba(245, 158, 11, 0.12);
 }
 
 .live .dot {

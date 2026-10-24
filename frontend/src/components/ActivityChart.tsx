@@ -60,45 +60,53 @@ export function ActivityChart({ samples, method, connected }: Props) {
       {data.length === 0 ? (
         <div className={styles.empty}>Waiting for activity samples</div>
       ) : (
-        <ResponsiveContainer width="100%" height={220}>
-          <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
-            <CartesianGrid stroke="#233247" strokeDasharray="3 3" />
-            <XAxis
-              dataKey="t"
-              type="number"
-              domain={[now - 120000, now]}
-              tickFormatter={(value: number) => `${Math.round((value - now) / 1000)}s`}
-              stroke="#64748b"
-              minTickGap={32}
-            />
-            <YAxis domain={[0, 1]} width={32} stroke="#64748b" />
-            <Tooltip
-              contentStyle={{ background: "#151F32", border: "1px solid #2B3B52" }}
-              labelFormatter={(_, payload) => {
-                const point = payload?.[0]?.payload as { label?: string } | undefined;
-                return point?.label ?? "";
-              }}
-            />
-            {regions.map((region) => (
-              <ReferenceArea
-                key={`${region.x1}-${region.x2}`}
-                x1={region.x1}
-                x2={region.x2}
-                fill="rgba(56, 189, 248, 0.12)"
-                strokeOpacity={0}
+        <div className={styles.chartBody}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+              <CartesianGrid stroke="#2a2f38" strokeDasharray="3 3" />
+              <XAxis
+                dataKey="t"
+                type="number"
+                domain={[now - 120000, now]}
+                tickFormatter={(value: number) => `${Math.round((value - now) / 1000)}s`}
+                stroke="#6d7580"
+                minTickGap={32}
               />
-            ))}
-            <ReferenceLine y={threshold} stroke="#F59E0B" strokeDasharray="4 4" />
-            <Line
-              type="monotone"
-              dataKey="score"
-              stroke="#38BDF8"
-              dot={false}
-              strokeWidth={2}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+              <YAxis
+                domain={[0, 1]}
+                ticks={[0, 0.25, 0.5, 0.75, 1]}
+                interval={0}
+                width={40}
+                stroke="#6d7580"
+              />
+              <Tooltip
+                contentStyle={{ background: "#1a1d23", border: "1px solid #323844", color: "#e8eaed" }}
+                labelFormatter={(_, payload) => {
+                  const point = payload?.[0]?.payload as { label?: string } | undefined;
+                  return point?.label ?? "";
+                }}
+              />
+              {regions.map((region) => (
+                <ReferenceArea
+                  key={`${region.x1}-${region.x2}`}
+                  x1={region.x1}
+                  x2={region.x2}
+                  fill="rgba(34, 211, 238, 0.12)"
+                  strokeOpacity={0}
+                />
+              ))}
+              <ReferenceLine y={threshold} stroke="#F59E0B" strokeDasharray="4 4" />
+              <Line
+                type="monotone"
+                dataKey="score"
+                stroke="#22D3EE"
+                dot={false}
+                strokeWidth={2}
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       )}
     </section>
   );

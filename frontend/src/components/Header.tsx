@@ -20,9 +20,10 @@ interface Props {
   role?: string | null;
   status: ConnectionStatus;
   statusDetail: string | null;
+  demoMode?: boolean;
 }
 
-export function Header({ companyName, userName, role, status, statusDetail }: Props) {
+export function Header({ companyName, userName, role, status, statusDetail, demoMode }: Props) {
   const config = getConfig();
   return (
     <header className={styles.header}>
@@ -31,6 +32,11 @@ export function Header({ companyName, userName, role, status, statusDetail }: Pr
         <div className={styles.company}>{companyName}</div>
       </Link>
       <div className={styles.meta}>
+        {demoMode ? (
+          <span className={`${styles.badge} ${styles.demoData}`} title="Local demo source. No live API or WebSocket.">
+            Demo data
+          </span>
+        ) : null}
         <span className={`${styles.badge} ${styles[status]}`} title={statusDetail ?? STATUS_LABEL[status]}>
           <span className={styles.dot} aria-hidden="true" />
           {STATUS_LABEL[status]}
