@@ -2,7 +2,7 @@
 
 Handoff for a new Grok conversation. Developer C owns `frontend/` only. Do not edit `backend/`, `firmware/`, `sensing/`, or `docs/event-schema.md` unless the team agrees. Do not invent API fields. Do not claim untested integrations. Do not push to origin without explicit approval.
 
-**Checkpoint (this document):** local commit on `main`. Not pushed.
+**Checkpoint:** local `main` only. Feature commit `2a0ecaf`. Not pushed.
 
 ---
 
@@ -246,12 +246,17 @@ Unfinished product work (not in this commit as features):
 
 ## 12. Git branch, commit, push status
 
+Inspected from the working tree (do not assume this without `git status` / `git log`):
+
 - Remote: `https://github.com/yjk82693/FactoryTetris.git`
 - Branch: **`main`**
-- Previously on origin: `40c1410` `feat(frontend): harden live mode and implement Auth0`; `b77be50` P0 dashboard.
-- **This checkpoint commit:** `2a0ecaf` (`2a0ecaf9ceb1ed7921cb6e7ffe130ee4e2d41b3e`)  
+- **`origin/main`:** `40c1410` `feat(frontend): harden live mode and implement Auth0` (also on origin: `b77be50` P0 dashboard)
+- **Feature checkpoint (frontend landing, Auth0 login UX, voice UI):** `2a0ecaf` (`2a0ecaf9ceb1ed7921cb6e7ffe130ee4e2d41b3e`)  
   `feat(frontend): add landing page, Auth0 integration, and voice controls`
-- `main` is **1 commit ahead of `origin/main`**. **Not pushed.** Do not `git push` unless Yoojun asks.
+- **Handoff file first landed in** `2a0ecaf`; hash note commit `b2a4c5d`. Further docs-only commits may exist on local `main`.
+- **Push status: NOT pushed.** Local `main` is ahead of `origin/main`. Do not `git push` unless Yoojun asks.
+- Tracked env templates only: `frontend/.env.example`. `frontend/.env` is gitignored. No Client Secret in the repo.
+- Left untracked on purpose: root `package-lock.json` (empty npm lockfile, not the frontend app).
 
 ---
 
