@@ -13,6 +13,9 @@ from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconne
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, AwareDatetime
 
+from backend.ai.config import briefing_flags
+from backend.ai.routes import create_briefing_router
+
 
 def now():
     return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
@@ -68,8 +71,8 @@ class Hub:
                            last_update_at=None, connected=False)
 
     def state(self):
-        return dict(server=dict(auth_mode='disabled', persistence='memory', voice_enabled=False,
-                                explain_enabled=False), company=COMPANY, machine=self.machine,
+        return dict(server=dict(auth_mode='disabled', persistence='memory', **briefing_flags()),
+                    company=COMPANY, machine=self.machine,
                     sensor=self.sensor, alerts=list(self.alerts), recent_events=list(self.events)[:50])
 
     def broadcast(self, kind, data):
@@ -171,6 +174,8 @@ async def lifespan(app):
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=['http://localhost:5173', 'http://127.0.0.1:5173'],
                    allow_methods=['GET', 'POST'], allow_headers=['*'])
+# C-owned briefing routes (Gemini / ElevenLabs). Ingest, WS, and Console CRUD remain B-owned.
+app.include_router(create_briefing_router(lambda: hub))
 
 
 @app.exception_handler(HTTPException)
