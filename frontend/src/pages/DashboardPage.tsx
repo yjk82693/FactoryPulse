@@ -155,7 +155,12 @@ export function DashboardPage() {
         <div className={styles.alertPanel}>
           <AlertPanel
             alerts={stream.state?.alerts ?? []}
-            voiceEnabled={Boolean(stream.state?.server.voice_enabled)}
+            voiceEnabled={!config.demoMode && Boolean(stream.state?.server.voice_enabled)}
+            fetchVoice={
+              !config.demoMode && source instanceof LiveSource
+                ? (alertId) => source.fetchVoice(alertId)
+                : null
+            }
             onAcknowledge={(id) => void onAcknowledge(id)}
             pendingId={pendingId}
           />

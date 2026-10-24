@@ -1,6 +1,8 @@
+import { Link } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { getConfig } from "../config";
 import type { ConnectionStatus } from "../state/streamReducer";
+import { BrandMark } from "./BrandMark";
 import styles from "./Header.module.css";
 
 const STATUS_LABEL: Record<ConnectionStatus, string> = {
@@ -24,10 +26,10 @@ export function Header({ companyName, userName, role, status, statusDetail }: Pr
   const config = getConfig();
   return (
     <header className={styles.header}>
-      <div className={styles.brand}>
-        <div className={styles.title}>FactoryPulse</div>
+      <Link className={styles.brand} to="/" aria-label="FactoryPulse home">
+        <BrandMark size="sm" />
         <div className={styles.company}>{companyName}</div>
-      </div>
+      </Link>
       <div className={styles.meta}>
         <span className={`${styles.badge} ${styles[status]}`} title={statusDetail ?? STATUS_LABEL[status]}>
           <span className={styles.dot} aria-hidden="true" />
@@ -45,7 +47,10 @@ export function Header({ companyName, userName, role, status, statusDetail }: Pr
 }
 
 function LogoutButton() {
-  const { logout } = useAuth0();
+  const { logout, isAuthenticated } = useAuth0();
+  if (!isAuthenticated) {
+    return null;
+  }
   return (
     <button
       className={styles.logout}

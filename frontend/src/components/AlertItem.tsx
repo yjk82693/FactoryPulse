@@ -13,18 +13,13 @@ const SEVERITY_ICON: Record<Alert["severity"], string> = {
 interface Props {
   alert: Alert;
   voiceEnabled: boolean;
+  fetchVoice: ((alertId: string) => Promise<Blob>) | null;
   onAcknowledge: (alertId: string) => void;
   busy: boolean;
 }
 
-export function AlertItem({ alert, voiceEnabled, onAcknowledge, busy }: Props) {
+export function AlertItem({ alert, voiceEnabled, fetchVoice, onAcknowledge, busy }: Props) {
   const config = getConfig();
-  const voiceReason = config.demoMode
-    ? "Voice alerts require Live Mode"
-    : voiceEnabled
-      ? "Play spoken alert"
-      : "Voice alerts not configured on server";
-  const voiceDisabled = config.demoMode || !voiceEnabled;
 
   return (
     <article className={`${styles.item} ${styles[alert.severity]}`}>
@@ -48,7 +43,12 @@ export function AlertItem({ alert, voiceEnabled, onAcknowledge, busy }: Props) {
         >
           {alert.acknowledged ? "Acknowledged" : "Acknowledge"}
         </button>
-        <VoiceButton disabled={voiceDisabled} reason={voiceReason} />
+        <VoiceButton
+          alertId={alert.alert_id}
+          demoMode={config.demoMode}
+          voiceEnabled={voiceEnabled}
+          fetchVoice={fetchVoice}
+        />
       </div>
     </article>
   );

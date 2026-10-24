@@ -5,7 +5,7 @@ export function NotFound() {
     <div className="config-error">
       <h1>Page not found</h1>
       <p>
-        <Link to="/">Return to dashboard</Link>
+        <Link to="/">Back to Home</Link>
       </p>
     </div>
   );

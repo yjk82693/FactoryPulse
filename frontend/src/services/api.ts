@@ -87,7 +87,12 @@ export function createApiClient(options: ApiClientOptions) {
 
   async function requestBlob(path: string, init: RequestInit = {}): Promise<Blob> {
     const response = await request(path, init);
-    return await response.blob();
+    const blob = await response.blob();
+    const type = response.headers.get("Content-Type")?.split(";")[0]?.trim();
+    if (type && type !== blob.type) {
+      return new Blob([blob], { type });
+    }
+    return blob;
   }
 
   return { request, requestJson, requestBlob };

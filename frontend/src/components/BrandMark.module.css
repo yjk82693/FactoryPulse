@@ -1,0 +1,65 @@
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.mark {
+  display: block;
+  flex-shrink: 0;
+}
+
+.sm .mark {
+  width: 28px;
+  height: 28px;
+}
+
+.md .mark {
+  width: 36px;
+  height: 36px;
+}
+
+.lg .mark {
+  width: 48px;
+  height: 48px;
+}
+
+.frame {
+  fill: var(--accent-soft);
+  stroke: var(--accent-primary);
+  stroke-width: 1.5;
+}
+
+.plant {
+  fill: none;
+  stroke: var(--text-primary);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.pulse {
+  fill: none;
+  stroke: var(--accent-primary);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.word {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.sm .word {
+  font-size: 16px;
+}
+
+.md .word {
+  font-size: 18px;
+}
+
+.lg .word {
+  font-size: 22px;
+}

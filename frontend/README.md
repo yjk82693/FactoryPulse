@@ -12,6 +12,9 @@ npm run dev
 ```
 
 App: http://localhost:5173  
+- `/` public landing page  
+- `/login` Auth0 entry (or local continue when auth is disabled)  
+- `/dashboard` assembly cell dashboard  
 Backend (Live Mode): http://localhost:8000
 
 ```bash
@@ -61,7 +64,7 @@ VITE_AUTH0_CLIENT_ID=your-spa-client-id
 VITE_AUTH0_AUDIENCE=https://factorypulse-api
 ```
 
-Login is required. Data still comes only from the local demo source. Company is shown as Demo Manufacturing (demo data). Identity uses the Auth0 user name.
+Get Started uses Auth0. Explore Demo opens `/dashboard` without login. Data still comes only from the local demo source. If the operator signs in, the header uses the Auth0 user name.
 
 ### 3. Live + auth disabled
 
@@ -92,13 +95,28 @@ VITE_AUTH0_AUDIENCE=https://factorypulse-api
 
 REST calls send a Bearer token. After the WebSocket opens, the client sends `{ "type": "auth", "token": "<access token>" }`.
 
-## Auth0 application settings
+## Auth0 Dashboard setup (Developer C)
 
-Create a **Single Page Application**.
+Do this in the Auth0 Dashboard. Do not put a Client Secret in `.env`.
 
-- Allowed callback URLs: `http://localhost:5173`
-- Allowed logout URLs: `http://localhost:5173`
-- Allowed web origins: `http://localhost:5173`
-- API audience: `https://factorypulse-api`
+1. Create or use a tenant. Note the domain, for example `your-tenant.us.auth0.com`.
+2. **Applications → Create Application**
+   - Name: `FactoryPulse SPA`
+   - Type: **Single Page Application**
+   - Token Endpoint Authentication Method: **None**
+3. Application settings:
+   - Allowed Callback URLs: `http://localhost:5173`
+   - Allowed Logout URLs: `http://localhost:5173`
+   - Allowed Web Origins: `http://localhost:5173`
+   - Application Login URI (optional): `http://localhost:5173/login`
+4. Copy **Domain** and **Client ID** into local `frontend/.env` as `VITE_AUTH0_DOMAIN` and `VITE_AUTH0_CLIENT_ID`. Restart `npm run dev`.
+5. **Applications → APIs → Create API**
+   - Name: `FactoryPulse API`
+   - Identifier: `https://factorypulse-api` (this is `VITE_AUTH0_AUDIENCE` / backend `AUTH0_AUDIENCE`)
+   - Signing algorithm: **RS256**
+6. Enable Universal Login. Create a test user if the tenant has no connections yet (Username-Password or a social connection).
+7. For local Auth0 UI testing: `VITE_DEMO_MODE=true` and `VITE_AUTH_DISABLED=false`. Explore Demo still works without login. Get Started / Continue with Auth0 exercises Universal Login.
+
+Frontend redirect_uri is `window.location.origin` (`http://localhost:5173`). After login, the app navigates to `/dashboard`. Logout `returnTo` is `http://localhost:5173`. Access tokens stay in memory; they are not written to localStorage.
 
 Prototype only: the machine is simulated. Wi-Fi CSI activity is an operational observation, not certified safety monitoring.

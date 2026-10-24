@@ -1,6 +1,6 @@
 import { Auth0Provider, useAuth0 } from "@auth0/auth0-react";
 import { useMemo, type ReactNode } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { getConfig } from "../config";
 import { TokenContext } from "./tokenContext";
 
@@ -9,18 +9,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (config.authDisabled) {
     return <DisabledAuth>{children}</DisabledAuth>;
   }
-  return (
-    <Auth0Provider
-      domain={config.auth0Domain as string}
-      clientId={config.auth0ClientId as string}
-      authorizationParams={{
-        audience: config.auth0Audience as string,
-        redirect_uri: window.location.origin,
-      }}
-    >
-      <Auth0TokenBridge>{children}</Auth0TokenBridge>
-    </Auth0Provider>
-  );
+  return <Auth0App>{children}</Auth0App>;
 }
 
 function DisabledAuth({ children }: { children: ReactNode }) {
@@ -32,6 +21,28 @@ function DisabledAuth({ children }: { children: ReactNode }) {
     [],
   );
   return <TokenContext.Provider value={value}>{children}</TokenContext.Provider>;
+}
+
+function Auth0App({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+  const config = getConfig();
+  return (
+    <Auth0Provider
+      domain={config.auth0Domain as string}
+      clientId={config.auth0ClientId as string}
+      cacheLocation="memory"
+      onRedirectCallback={(appState) => {
+        navigate((appState?.returnTo as string | undefined) ?? "/dashboard", { replace: true });
+      }}
+      authorizationParams={{
+        audience: config.auth0Audience as string,
+        redirect_uri: window.location.origin,
+        scope: "openid profile email",
+      }}
+    >
+      <Auth0TokenBridge>{children}</Auth0TokenBridge>
+    </Auth0Provider>
+  );
 }
 
 function Auth0TokenBridge({ children }: { children: ReactNode }) {
@@ -53,7 +64,7 @@ function Auth0TokenBridge({ children }: { children: ReactNode }) {
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const config = getConfig();
-  if (config.authDisabled) {
+  if (config.authDisabled || config.demoMode) {
     return children;
   }
   return <AuthRequired>{children}</AuthRequired>;

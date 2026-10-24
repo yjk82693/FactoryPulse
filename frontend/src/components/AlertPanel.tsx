@@ -5,11 +5,12 @@ import styles from "./AlertPanel.module.css";
 interface Props {
   alerts: Alert[];
   voiceEnabled: boolean;
+  fetchVoice: ((alertId: string) => Promise<Blob>) | null;
   onAcknowledge: (alertId: string) => void;
   pendingId: string | null;
 }
 
-export function AlertPanel({ alerts, voiceEnabled, onAcknowledge, pendingId }: Props) {
+export function AlertPanel({ alerts, voiceEnabled, fetchVoice, onAcknowledge, pendingId }: Props) {
   const open = alerts
     .filter((item) => !item.acknowledged)
     .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
@@ -30,6 +31,7 @@ export function AlertPanel({ alerts, voiceEnabled, onAcknowledge, pendingId }: P
               key={alert.alert_id}
               alert={alert}
               voiceEnabled={voiceEnabled}
+              fetchVoice={fetchVoice}
               onAcknowledge={onAcknowledge}
               busy={pendingId === alert.alert_id}
             />
