@@ -1,0 +1,22 @@
+# secrets
+.env
+.env.local
+**/secrets.h
+
+# python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# node
+node_modules/
+dist/
+coverage/
+
+# data and build output
+data/raw/
+build/
+*.log
+.DS_Store
