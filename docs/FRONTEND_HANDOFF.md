@@ -167,7 +167,7 @@ Implemented in the frontend. Wired to contract section 13.
 - `useAlertVoice`: one clip at a time; object-URL cache; maps 501 → “Voice alerts not configured on server” (disable), 502/504 → retryable, 404 → “Alert no longer available”.
 - Tests: `useAlertVoice.test.ts` (5), `VoiceButton.test.tsx` (2).
 
-**Not verified against a running backend:** real MP3 playback, `X-Voice-Cached`, 501 when keys unset, 502/504 upstream. Backend `voice_enabled` in State is read from contract types; live ElevenLabs still depends on Developer B (`ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`).
+**Not verified with real providers:** Gemini/ElevenLabs HTTP (keys unset on this machine). C-owned `backend/ai/` returns 501 when `GEMINI_API_KEY` / `ELEVENLABS_API_KEY`+`ELEVENLABS_VOICE_ID` are missing. Flags mean configuration presence, not a successful upstream call.
 
 ---
 

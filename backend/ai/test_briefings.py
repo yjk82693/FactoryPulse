@@ -95,10 +95,7 @@ class BriefingRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 501)
         self.assertEqual(response.json()['code'], 'voice_not_configured')
 
-    def test_unknown_alert_is_404(self):
-        os.environ['GEMINI_API_KEY'] = 'test-gemini'
-        os.environ['ELEVENLABS_API_KEY'] = 'test-voice'
-        os.environ['ELEVENLABS_VOICE_ID'] = 'voice-1'
+    def test_unknown_alert_is_404_even_when_unconfigured(self):
         with TestClient(main.app) as client:
             missing = str(uuid4())
             explain = client.post(f'/api/alerts/{missing}/explain')

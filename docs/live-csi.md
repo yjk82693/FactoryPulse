@@ -84,7 +84,7 @@ Open http://localhost:5173/dashboard.
 - Machine card **Simulated machine**, `PICK → MOVE → ASSEMBLE → RETURN` from in-process sim (`machine.simulated: true`).
 - Sensor **disconnected** until ingest; score is not a live CSI value.
 - Timeline shows `STEP_STARTED` / `STEP_COMPLETED`.
-- Acknowledge uses `POST /api/alerts/{id}/ack`. Voice stays disabled (`voice_enabled: false`).
+- Acknowledge uses `POST /api/alerts/{id}/ack`. Explain/voice stay disabled while `explain_enabled` / `voice_enabled` are false (no server keys). Unknown alert ids return 404 even when keys are unset.
 - Stopping the backend: **RECONNECTING** / **OFFLINE**. Dashboard does not switch to DemoSource.
 
 ### Only if `csi_stream.py` is actually running against RX

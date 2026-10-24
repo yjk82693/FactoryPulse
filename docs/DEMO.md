@@ -69,7 +69,7 @@ Restart `npm run dev`. Header should show **LIVE** (backend), not Demo data.
 4. Stop ingest ~5s: **Sensor disconnected**, score labeled **Last reading (stale)**. Header stays **LIVE** if the API is up.
 5. Stop the backend: header **RECONNECTING** / **OFFLINE**. Cached score is **Cached reading**, not a live CSI value. Dashboard must not switch to DemoSource.
 
-**Explain / voice:** buttons appear in Live Mode only when `explain_enabled` / `voice_enabled` are true. Unset keys should 501; missing routes today may 404 and are treated as not configured. Spoken text is built **on the server** (v1.3); the SPA never sends speech text or API keys. Gemini copy is shown under Possible interpretations, not as a confirmed fault.
+**Explain / voice:** buttons appear in Live Mode only when `explain_enabled` / `voice_enabled` are true (keys present on the **server**, not connectivity). Unset keys → 501; unknown alert → 404. Spoken text is built **on the server** (v1.3); the SPA never sends speech text or API keys. Gemini copy is shown under Possible interpretations, not as a confirmed fault. Real Gemini/ElevenLabs is **not** verified until those env vars are set.
 
 **Console HTTP:** leave `VITE_CONSOLE_HTTP=false` until B confirms catalog. Then Live Mode loads `/api/console/catalog`. A failed live fetch keeps last-known/empty state and does **not** switch to mock seed data.
 

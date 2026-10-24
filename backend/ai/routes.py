@@ -23,10 +23,10 @@ def create_briefing_router(get_hub):
     @router.post('/api/alerts/{alert_id}/explain')
     async def explain_alert(alert_id: str, request: Request):
         await request.body()
-        if not explain_enabled():
-            raise HTTPException(501, dict(detail='Gemini is not configured', code='explain_not_configured'))
         hub = get_hub()
         alert = find_alert(hub, alert_id)
+        if not explain_enabled():
+            raise HTTPException(501, dict(detail='Gemini is not configured', code='explain_not_configured'))
         try:
             explanation = gemini_service.explain_from_evidence(trusted_evidence(hub, alert))
         except GeminiError as error:
@@ -37,10 +37,10 @@ def create_briefing_router(get_hub):
     @router.post('/api/alerts/{alert_id}/voice')
     async def voice_alert(alert_id: str, request: Request):
         await request.body()
-        if not voice_enabled():
-            raise HTTPException(501, dict(detail='ElevenLabs is not configured', code='voice_not_configured'))
         hub = get_hub()
         alert = find_alert(hub, alert_id)
+        if not voice_enabled():
+            raise HTTPException(501, dict(detail='ElevenLabs is not configured', code='voice_not_configured'))
         spoken = spoken_text(hub, alert)
         try:
             audio, cached = voice_service.synthesize(alert_id, spoken)
