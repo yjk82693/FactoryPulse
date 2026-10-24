@@ -47,6 +47,9 @@ App root: `frontend/`. Dev server: `http://localhost:5173`. Backend (Live): `htt
 | `/` | `LandingPage` | Public |
 | `/login` | `LoginPage` | Public. Auth0 redirect, or “Continue to dashboard” when `VITE_AUTH_DISABLED=true` |
 | `/dashboard` | `DashboardPage` | `ProtectedRoute`: skipped when auth disabled **or** Demo Mode; otherwise Auth0 session required |
+| `/machines` `/profiles` `/simulator` `/sensors` | Mock console pages | Same protection. In-memory `ConsoleStore` — not Contract v1.2 |
+| `/optimizer` | Layout optimizer | Same protection. Example floor, not CSI |
+| `/optimizer/sensors` | Sensor-placement comparison | Illustrative cost/coverage/ambiguity scores |
 | `/access-denied` | `AccessDenied` | Public; used for company/membership failures |
 | `*` | `NotFound` | Public |
 
@@ -59,6 +62,7 @@ App root: `frontend/`. Dev server: `http://localhost:5173`. Backend (Live): `htt
 - `DataSource` interface:
   - **DemoSource** — local contract-valid simulation. Zero network.
   - **LiveSource** — `GET /api/state` then WebSocket `/ws`. Never falls back to demo data.
+- Console modules use a separate `ConsoleStore` (`frontend/src/console/`) with `MemoryConsoleStore`. Do not merge this into `streamReducer`. Proposed HTTP resources are in `docs/PROPOSED_CONSOLE_API.md` (not Contract v1.2).
 
 ### Major UI components
 

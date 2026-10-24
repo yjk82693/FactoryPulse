@@ -35,10 +35,11 @@ Open http://localhost:5173
 1. **Landing (15s)** — “Explore Demo” → `/dashboard`. Note **Demo data**.
 2. **Cell (45s)** — Simulated machine `PICK → MOVE → ASSEMBLE → RETURN`. Activity chart is **Simulated sensor**, not live CSI. Score and workflow stay on one 1080p screen.
 3. **Alerts (30s)** — During ASSEMBLE, an `ACTIVITY_REVIEW` may appear (warning, review copy). **Acknowledge**. Voice stays disabled: “Voice alerts require Live Mode”.
-4. **Optimizer (45s)** — Header **Optimizer**. Example floor (not CSI coordinates). Click **Optimize Layout**. Expect a real algorithm drop (example baseline **418** → **247**, about **41%**). Swap two stations: suggestion clears. **Reset**.
-5. **Close (15s)** — Machine is simulated. Optimizer is an example layout. Live CSI is pending B + ingest.
+4. **Optimizer (45s)** — Header **Optimizer**. Example floor (not CSI coordinates). Click **Optimize Layout**. Expect a real algorithm drop (example baseline **418** → **247**, about **41%**). Swap two stations: suggestion clears. **Reset**. Optional: **Sensor placement** tab compares dedicated vs shared-zone cost/ambiguity (illustrative, not RF).
+5. **Console extras (optional 30s)** — **Machines** registry CRUD, **Simulator** sustained deviation → review alert (not a fault), **Sensors** shared-zone overlap warning.
+6. **Close (15s)** — Machine is simulated. Optimizer is an example layout. Live CSI is pending B + ingest.
 
-Total ~2.5 minutes. If a cycle is slow, skip waiting for a second alert.
+Total ~2.5–3 minutes. If a cycle is slow, skip waiting for a second alert.
 
 ---
 

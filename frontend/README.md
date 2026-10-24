@@ -16,6 +16,8 @@ App: http://localhost:5173
 - `/login` Auth0 entry (or local continue when auth is disabled)  
 - `/dashboard` assembly cell dashboard  
 - `/optimizer` example factory layout optimizer (not CSI coordinates)  
+- `/optimizer/sensors` illustrative sensor-placement comparison  
+- `/machines`, `/profiles`, `/simulator`, `/sensors` mock console (in-memory, not Contract v1.2)  
 Backend (Live Mode, **pending Developer B**): http://localhost:8000
 
 Hackathon walkthrough and ESP32/API fallback: [`docs/DEMO.md`](../docs/DEMO.md).

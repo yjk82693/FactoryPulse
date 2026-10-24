@@ -24,6 +24,7 @@ interface Props {
   demoMode?: boolean;
   showStreamStatus?: boolean;
   exampleLayout?: boolean;
+  dataBadge?: string | null;
 }
 
 export function Header({
@@ -35,6 +36,7 @@ export function Header({
   demoMode,
   showStreamStatus = true,
   exampleLayout = false,
+  dataBadge = null,
 }: Props) {
   const config = getConfig();
   return (
@@ -51,6 +53,14 @@ export function Header({
             title="Local example floor and flow matrix. Not CSI locations or live machine state."
           >
             Example layout
+          </span>
+        ) : null}
+        {dataBadge ? (
+          <span
+            className={`${styles.badge} ${styles.demoData}`}
+            title="In-memory mock console. Not Contract v1.2 ingest and not measured CSI."
+          >
+            {dataBadge}
           </span>
         ) : null}
         {demoMode ? (
