@@ -70,7 +70,16 @@ def synthesize(alert_id: str, spoken: str) -> tuple[bytes, bool]:
     except httpx.HTTPError as error:
         raise VoiceError('voice_upstream_error', 'ElevenLabs request failed') from error
     if response.status_code >= 400:
-        raise VoiceError('voice_upstream_error', 'ElevenLabs request failed')
+        detail = f'ElevenLabs request failed ({response.status_code})'
+        try:
+            payload = response.json()
+            inner = payload.get('detail') if isinstance(payload, dict) else None
+            code = inner.get('code') if isinstance(inner, dict) else None
+            if code == 'invalid_api_key':
+                detail = 'ElevenLabs API key is invalid'
+        except ValueError:
+            pass
+        raise VoiceError('voice_upstream_error', detail)
     audio = response.content
     content_type = (response.headers.get('content-type') or '').split(';')[0].strip()
     if content_type and content_type != 'audio/mpeg':

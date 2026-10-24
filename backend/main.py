@@ -13,6 +13,10 @@ from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconne
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, AwareDatetime
 
+from backend.envload import load_backend_env
+
+load_backend_env()
+
 from backend.ai.config import briefing_flags
 from backend.ai.routes import create_briefing_router
 
