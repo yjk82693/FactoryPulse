@@ -35,13 +35,17 @@ export function EventTimeline({ events }: Props) {
         </select>
       </div>
       <div className={styles.list}>
-        {visible.map((event) => (
-          <div key={event.event_id} className={styles.row} title={`${event.timestamp} UTC`}>
-            <span className={styles.time}>{localTime(event.timestamp)}</span>
-            <span className={styles.source}>{event.source}</span>
-            <span className={styles.type}>{event.event_type}</span>
-          </div>
-        ))}
+        {visible.length === 0 ? (
+          <div className={styles.empty}>No events yet</div>
+        ) : (
+          visible.map((event) => (
+            <div key={event.event_id} className={styles.row} title={`${event.timestamp} UTC`}>
+              <span className={styles.time}>{localTime(event.timestamp)}</span>
+              <span className={styles.source}>{event.source}</span>
+              <span className={styles.type}>{event.event_type}</span>
+            </div>
+          ))
+        )}
       </div>
       {hiddenCount > 0 || expanded ? (
         <button className={styles.more} type="button" onClick={() => setExpanded((value) => !value)}>

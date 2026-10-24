@@ -32,6 +32,12 @@
   flex: 1;
 }
 
+.empty {
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding: 8px 0;
+}
+
 .row {
   display: grid;
   grid-template-columns: 72px 64px 1fr;

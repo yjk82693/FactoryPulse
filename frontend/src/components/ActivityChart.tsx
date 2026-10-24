@@ -18,9 +18,10 @@ interface Props {
   samples: ActivitySample[];
   method: Method | null;
   connected: boolean;
+  backendLive: boolean;
 }
 
-export function ActivityChart({ samples, method, connected }: Props) {
+export function ActivityChart({ samples, method, connected, backendLive }: Props) {
   const now = Date.now();
   const threshold = samples[samples.length - 1]?.threshold ?? DEFAULT_THRESHOLD;
   const methodLabel =
@@ -53,9 +54,15 @@ export function ActivityChart({ samples, method, connected }: Props) {
           <div className="panel-title">
             {methodLabel} · last 120s
           </div>
-          <div className="panel-subtitle">Activity score 0–1 with detection threshold</div>
+          <div className="panel-subtitle">
+            {backendLive && connected
+              ? "Activity score 0–1 with detection threshold"
+              : data.length > 0
+                ? "Frozen last samples · not a live reading"
+                : "Activity score 0–1 with detection threshold"}
+          </div>
         </div>
-        {!connected ? <div className={styles.disconnected}>Sensor disconnected</div> : null}
+        {backendLive && !connected ? <div className={styles.disconnected}>Sensor disconnected</div> : null}
       </div>
       {data.length === 0 ? (
         <div className={styles.empty}>Waiting for activity samples</div>
