@@ -58,7 +58,7 @@ export function Header({
         {dataBadge ? (
           <span
             className={`${styles.badge} ${styles.demoData}`}
-            title="In-memory mock console. Not Contract v1.2 ingest and not measured CSI."
+            title="Console registry. Not live-cell CSI ingest and not measured RF isolation."
           >
             {dataBadge}
           </span>

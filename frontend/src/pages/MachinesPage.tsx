@@ -17,10 +17,15 @@ export function MachinesPage() {
   const [kind, setKind] = useState<MachineKind>("press");
   const profiles = catalog.profiles.filter((profile) => profile.machineKind === kind);
 
-  function run(action: () => void): void {
+  function run(action: () => unknown): void {
     try {
       setError(null);
-      action();
+      const result = action();
+      if (result && typeof result === "object" && "then" in result) {
+        void (result as Promise<unknown>).catch((caught: unknown) => {
+          setError(caught instanceof Error ? caught.message : "Unable to update registry.");
+        });
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to update registry.");
     }

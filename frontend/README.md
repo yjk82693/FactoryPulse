@@ -17,8 +17,8 @@ App: http://localhost:5173
 - `/dashboard` assembly cell dashboard  
 - `/optimizer` example factory layout optimizer (not CSI coordinates)  
 - `/optimizer/sensors` illustrative sensor-placement comparison  
-- `/machines`, `/profiles`, `/simulator`, `/sensors` mock console (in-memory until Contract v1.3 `/api/console/*`)  
-Backend (Live Mode): http://localhost:8000 — setup in [`docs/live-csi.md`](../docs/live-csi.md). Console pages stay on in-memory mocks. Shared contract: [`docs/event-schema.md`](../docs/event-schema.md) v1.3.
+- `/machines`, `/profiles`, `/simulator`, `/sensors` console (in-memory by default; set `VITE_CONSOLE_HTTP=true` in Live Mode after B ships `/api/console/*`)  
+Backend (Live Mode): http://localhost:8000 — setup in [`docs/live-csi.md`](../docs/live-csi.md). Shared contract: [`docs/event-schema.md`](../docs/event-schema.md) v1.3.
 
 Hackathon walkthrough and ESP32/API fallback: [`docs/DEMO.md`](../docs/DEMO.md).
 
@@ -36,6 +36,7 @@ Names only. Values stay in local `.env` files. Never put backend secrets, databa
 |---|---|
 | `VITE_DEMO_MODE` | `true` = local DemoSource only. `false` = LiveSource only. |
 | `VITE_AUTH_DISABLED` | `true` = no Auth0. `false` = Auth0 login required. |
+| `VITE_CONSOLE_HTTP` | `true` = Live Mode uses `HttpConsoleStore`. Default `false` (mocks). Demo Mode always mocks. |
 | `VITE_API_URL` | REST origin, required in Live Mode. Example: `http://localhost:8000` |
 | `VITE_WS_URL` | WebSocket URL, required in Live Mode. Example: `ws://localhost:8000/ws` |
 | `VITE_AUTH0_DOMAIN` | Auth0 domain, required when auth is enabled. |

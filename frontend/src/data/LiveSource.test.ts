@@ -163,4 +163,34 @@ describe("LiveSource", () => {
     });
     unauth.stop();
   });
+
+  it("POSTs explain and voice with an empty body", async () => {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const path = String(url);
+      if (path.endsWith("/explain") && init?.method === "POST") {
+        return jsonResponse({ explanation: "Possible nearby motion." });
+      }
+      if (path.endsWith("/voice") && init?.method === "POST") {
+        return new Response(new Uint8Array([1, 2, 3]), {
+          status: 200,
+          headers: { "Content-Type": "audio/mpeg" },
+        });
+      }
+      return jsonResponse({ detail: "missing", code: "not_found" }, 404);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const source = new LiveSource({
+      apiUrl: "http://localhost:8000",
+      wsUrl: "ws://localhost:8000/ws",
+      authDisabled: true,
+      webSocketCtor: FakeSocketCtor,
+    });
+    await expect(source.explain("11111111-1111-4111-8111-111111111111")).resolves.toEqual({
+      explanation: "Possible nearby motion.",
+    });
+    const blob = await source.fetchVoice("11111111-1111-4111-8111-111111111111");
+    expect(blob.type).toBe("audio/mpeg");
+    expect(fetchMock.mock.calls.every(([, init]) => !init?.body)).toBe(true);
+    source.stop();
+  });
 });

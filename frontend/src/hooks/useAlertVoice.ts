@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer } from "react";
 import { ApiClientError } from "../services/api";
 
-export type VoiceStatus = "idle" | "loading" | "playing" | "stopped" | "error";
+export type VoiceStatus = "idle" | "loading" | "playing" | "paused" | "stopped" | "error";
 
 export interface VoiceEntry {
   status: VoiceStatus;
@@ -37,7 +37,7 @@ function setEntry(alertId: string, patch: Partial<VoiceEntry>): void {
 
 export function mapVoiceError(error: unknown): { message: string; disable: boolean } {
   if (error instanceof ApiClientError) {
-    if (error.status === 501) {
+    if (error.status === 501 || (error.status === 404 && error.code !== "alert_not_found")) {
       return { message: "Voice alerts not configured on server", disable: true };
     }
     if (error.status === 404) {
@@ -67,7 +67,7 @@ function ensureAudio(): HTMLAudioElement {
   return audio;
 }
 
-function pauseCurrent(nextStatus: VoiceStatus = "stopped"): void {
+function pauseCurrent(nextStatus: VoiceStatus = "paused"): void {
   audio?.pause();
   if (playingId) {
     setEntry(playingId, { status: nextStatus });
@@ -98,7 +98,19 @@ export async function playAlert(alertId: string, fetchVoice: FetchVoice): Promis
   if (playingId && playingId !== alertId) {
     pauseCurrent("stopped");
   }
+  const existing = getEntry(alertId);
   const cached = urls.get(alertId);
+  if (existing.status === "paused" && cached && audio) {
+    playingId = alertId;
+    setEntry(alertId, { status: "playing", error: null });
+    try {
+      await audio.play();
+    } catch {
+      playingId = null;
+      setEntry(alertId, { status: "error", error: "Voice service unavailable, try again" });
+    }
+    return;
+  }
   if (cached) {
     await startAudio(alertId, cached);
     return;
@@ -132,13 +144,26 @@ export async function playAlert(alertId: string, fetchVoice: FetchVoice): Promis
   }
 }
 
+export function pauseAlert(alertId: string): void {
+  if (playingId === alertId) {
+    pauseCurrent("paused");
+  }
+}
+
 export function stopAlert(alertId: string): void {
   if (loadingId === alertId) {
     loadingId = null;
     setEntry(alertId, { status: "stopped" });
   }
-  if (playingId === alertId) {
-    pauseCurrent("stopped");
+  if (playingId === alertId || getEntry(alertId).status === "paused") {
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+    if (playingId === alertId) {
+      playingId = null;
+    }
+    setEntry(alertId, { status: "stopped" });
   }
 }
 
@@ -190,6 +215,10 @@ export function useAlertVoice(alertId: string, fetchVoice: FetchVoice | null) {
     void playAlert(alertId, fetchVoice);
   }, [alertId, fetchVoice]);
 
+  const pause = useCallback(() => {
+    pauseAlert(alertId);
+  }, [alertId]);
+
   const stop = useCallback(() => {
     stopAlert(alertId);
   }, [alertId]);
@@ -199,6 +228,7 @@ export function useAlertVoice(alertId: string, fetchVoice: FetchVoice | null) {
     error: entry.error,
     disabledReason: entry.disabledReason,
     play,
+    pause,
     stop,
   };
 }

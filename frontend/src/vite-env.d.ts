@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_DEMO_MODE?: string;
   readonly VITE_AUTH_DISABLED?: string;
+  readonly VITE_CONSOLE_HTTP?: string;
   readonly VITE_API_URL?: string;
   readonly VITE_WS_URL?: string;
   readonly VITE_AUTH0_DOMAIN?: string;

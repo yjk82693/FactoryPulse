@@ -1,5 +1,6 @@
-import type { Alert } from "../types/contract";
+import type { Alert, Event, Step } from "../types/contract";
 import { relativeTime } from "../lib/time";
+import { ExplainButton } from "./ExplainButton";
 import { VoiceButton } from "./VoiceButton";
 import { getConfig } from "../config";
 import styles from "./AlertItem.module.css";
@@ -14,11 +15,27 @@ interface Props {
   alert: Alert;
   voiceEnabled: boolean;
   fetchVoice: ((alertId: string) => Promise<Blob>) | null;
+  explainEnabled?: boolean;
+  fetchExplain?: ((alertId: string) => Promise<{ explanation: string }>) | null;
+  machineId?: string | null;
+  currentStep?: Step | null;
+  events?: Event[];
   onAcknowledge: (alertId: string) => void;
   busy: boolean;
 }
 
-export function AlertItem({ alert, voiceEnabled, fetchVoice, onAcknowledge, busy }: Props) {
+export function AlertItem({
+  alert,
+  voiceEnabled,
+  fetchVoice,
+  explainEnabled = false,
+  fetchExplain = null,
+  machineId = null,
+  currentStep = null,
+  events = [],
+  onAcknowledge,
+  busy,
+}: Props) {
   const config = getConfig();
 
   return (
@@ -43,6 +60,15 @@ export function AlertItem({ alert, voiceEnabled, fetchVoice, onAcknowledge, busy
         >
           {alert.acknowledged ? "Acknowledged" : "Acknowledge"}
         </button>
+        <ExplainButton
+          alert={alert}
+          demoMode={config.demoMode}
+          explainEnabled={explainEnabled}
+          fetchExplain={fetchExplain}
+          machineId={machineId}
+          currentStep={currentStep}
+          events={events}
+        />
         <VoiceButton
           alertId={alert.alert_id}
           demoMode={config.demoMode}

@@ -29,6 +29,19 @@ export function SensorsPage() {
           </p>
         </section>
         {error ? <p className={chrome.warn}>{error}</p> : null}
+        {catalog.physicalSensors.length > 0 ? (
+          <section className="panel">
+            <div className="panel-title">Physical CSI sensors</div>
+            <p className={chrome.meta}>
+              Ingest identity only. Bound machine stays the live cell in P0. Raw keys are never shown.
+            </p>
+            {catalog.physicalSensors.map((sensor) => (
+              <p key={sensor.id} className={chrome.meta}>
+                {sensor.id} · bound {sensor.boundMachineId} · {sensor.active ? "active" : "inactive"}
+              </p>
+            ))}
+          </section>
+        ) : null}
         <div className={chrome.split}>
           <section className="panel">
             <div className="panel-title">Links</div>
@@ -46,7 +59,15 @@ export function SensorsPage() {
                       {link.machineIds.join(", ")}
                     </span>
                     <p className={chrome.warn}>{linkAmbiguity(link, catalog)}</p>
-                    <button className={chrome.danger} type="button" onClick={() => store.deleteLink(link.id)}>
+                    <button
+                      className={chrome.danger}
+                      type="button"
+                      onClick={() => {
+                        void Promise.resolve(store.deleteLink(link.id)).catch((caught: unknown) => {
+                          setError(caught instanceof Error ? caught.message : "Unable to save link.");
+                        });
+                      }}
+                    >
                       Remove
                     </button>
                   </article>
@@ -62,7 +83,10 @@ export function SensorsPage() {
                 event.preventDefault();
                 try {
                   setError(null);
-                  store.upsertLink({ name, mode, zoneId, machineIds });
+                  const result = store.upsertLink({ name, mode, zoneId, machineIds });
+                  void Promise.resolve(result).catch((caught: unknown) => {
+                    setError(caught instanceof Error ? caught.message : "Unable to save link.");
+                  });
                 } catch (caught) {
                   setError(caught instanceof Error ? caught.message : "Unable to save link.");
                 }

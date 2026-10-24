@@ -35,7 +35,8 @@ export function VoiceButton({ alertId, demoMode, voiceEnabled, fetchVoice }: Pro
 
   const loading = voice.status === "loading";
   const playing = voice.status === "playing";
-  const label = loading ? "Generating audio…" : playing ? "Stop" : "Listen to Alert";
+  const paused = voice.status === "paused";
+  const label = loading ? "Generating audio…" : playing ? "Pause" : paused ? "Resume" : "Listen to Alert";
 
   return (
     <span className={styles.wrap}>
@@ -44,10 +45,15 @@ export function VoiceButton({ alertId, demoMode, voiceEnabled, fetchVoice }: Pro
         type="button"
         disabled={loading}
         title={label}
-        onClick={() => (playing ? voice.stop() : voice.play())}
+        onClick={() => (playing ? voice.pause() : voice.play())}
       >
         {label}
       </button>
+      {playing || paused ? (
+        <button className={styles.button} type="button" title="Stop" onClick={() => voice.stop()}>
+          Stop
+        </button>
+      ) : null}
       {voice.status === "error" && voice.error ? (
         <span className={styles.error}>
           {voice.error}{" "}

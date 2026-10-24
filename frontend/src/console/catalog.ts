@@ -99,6 +99,19 @@ export function seedCatalog(): ConsoleCatalog {
         machineIds: ["mch-conv-01"],
       },
     ],
+    physicalSensors: [],
     selectedMachineId: "mch-press-01",
+  };
+}
+
+export function emptyCatalog(): ConsoleCatalog {
+  return {
+    zones: [],
+    templates: [],
+    profiles: [],
+    machines: [],
+    links: [],
+    physicalSensors: [],
+    selectedMachineId: null,
   };
 }

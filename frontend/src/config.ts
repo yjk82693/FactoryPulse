@@ -1,6 +1,7 @@
 export interface AppConfig {
   demoMode: boolean;
   authDisabled: boolean;
+  consoleHttp: boolean;
   apiUrl: string | null;
   wsUrl: string | null;
   auth0Domain: string | null;
@@ -21,6 +22,11 @@ function requiredBool(raw: string | undefined, name: string): boolean {
   throw new ConfigError(`${name} must be "true" or "false".`);
 }
 
+function optionalBool(raw: string | undefined, fallback: boolean, name: string): boolean {
+  if (raw === undefined || raw.trim() === "") return fallback;
+  return requiredBool(raw, name);
+}
+
 function trim(raw: string | undefined): string | null {
   const value = raw?.trim() ?? "";
   return value.length > 0 ? value : null;
@@ -29,6 +35,7 @@ function trim(raw: string | undefined): string | null {
 export function parseConfig(env: ImportMetaEnv = import.meta.env): AppConfig {
   const demoMode = requiredBool(env.VITE_DEMO_MODE, "VITE_DEMO_MODE");
   const authDisabled = requiredBool(env.VITE_AUTH_DISABLED, "VITE_AUTH_DISABLED");
+  const consoleHttp = optionalBool(env.VITE_CONSOLE_HTTP, false, "VITE_CONSOLE_HTTP");
   const apiUrl = trim(env.VITE_API_URL);
   const wsUrl = trim(env.VITE_WS_URL);
   const auth0Domain = trim(env.VITE_AUTH0_DOMAIN);
@@ -50,6 +57,7 @@ export function parseConfig(env: ImportMetaEnv = import.meta.env): AppConfig {
   return {
     demoMode,
     authDisabled,
+    consoleHttp,
     apiUrl,
     wsUrl,
     auth0Domain,

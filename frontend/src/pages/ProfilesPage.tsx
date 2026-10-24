@@ -14,10 +14,15 @@ export function ProfilesPage() {
   const profile = catalog.profiles.find((item) => item.id === selectedId) ?? null;
   const machine = catalog.machines.find((item) => item.id === catalog.selectedMachineId) ?? null;
 
-  function run(action: () => void): void {
+  function run(action: () => unknown): void {
     try {
       setError(null);
-      action();
+      const result = action();
+      if (result && typeof result === "object" && "then" in result) {
+        void (result as Promise<unknown>).catch((caught: unknown) => {
+          setError(caught instanceof Error ? caught.message : "Unable to update profile.");
+        });
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to update profile.");
     }
@@ -58,7 +63,9 @@ export function ProfilesPage() {
                 event.preventDefault();
                 run(() => {
                   const created = store.createProfileFromTemplate(templateId, name);
-                  setSelectedId(created.id);
+                  return Promise.resolve(created).then((profile) => {
+                    setSelectedId(profile.id);
+                  });
                 });
               }}
             >

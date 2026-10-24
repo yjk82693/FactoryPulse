@@ -6,6 +6,7 @@ import { ApiClientError } from "../services/api";
 class FakeAudio {
   src = "";
   paused = true;
+  currentTime = 0;
   play = vi.fn(async () => {
     this.paused = false;
   });

@@ -1,6 +1,9 @@
 import type { ConsoleCatalog, SensorLink } from "./types";
 
 export function linkAmbiguity(link: SensorLink, catalog: ConsoleCatalog): string | null {
+  if (link.ambiguitySummary) {
+    return link.ambiguitySummary;
+  }
   if (link.mode === "dedicated" && link.machineIds.length === 1) {
     return "Dedicated link: still an illustrative radio path, not perfect isolation.";
   }

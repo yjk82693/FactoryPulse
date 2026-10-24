@@ -176,6 +176,15 @@ export function DashboardPage() {
                   ? (alertId) => source.fetchVoice(alertId)
                   : null
               }
+              explainEnabled={!config.demoMode && Boolean(stream.state?.server.explain_enabled)}
+              fetchExplain={
+                !config.demoMode && source instanceof LiveSource
+                  ? (alertId) => source.explain(alertId)
+                  : null
+              }
+              machineId={stream.state?.machine.machine_id ?? null}
+              currentStep={stream.state?.machine.current_step ?? null}
+              events={stream.events}
               onAcknowledge={(id) => void onAcknowledge(id)}
               pendingId={pendingId}
             />

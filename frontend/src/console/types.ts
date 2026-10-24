@@ -38,6 +38,7 @@ export interface MotionProfile {
   name: string;
   machineKind: MachineKind;
   version: number;
+  versionId?: string;
   phases: PhaseTemplate[];
   calibrations: InstallationCalibration[];
 }
@@ -50,6 +51,7 @@ export interface MachineRecord {
   status: OperatingStatus;
   profileId: string;
   sensorLinkIds: string[];
+  liveCellId?: string | null;
 }
 
 export interface SensorLink {
@@ -58,6 +60,15 @@ export interface SensorLink {
   mode: SensingMode;
   zoneId: string;
   machineIds: string[];
+  physicalSensorId?: string | null;
+  ambiguityLevel?: "low" | "high";
+  ambiguitySummary?: string;
+}
+
+export interface PhysicalSensor {
+  id: string;
+  boundMachineId: string;
+  active: boolean;
 }
 
 export interface ReviewAlert {
@@ -106,7 +117,16 @@ export interface ConsoleCatalog {
   profiles: MotionProfile[];
   machines: MachineRecord[];
   links: SensorLink[];
+  physicalSensors: PhysicalSensor[];
   selectedMachineId: string | null;
+}
+
+export type ConsoleSourceKind = "memory" | "http";
+
+export interface ConsoleMeta {
+  source: ConsoleSourceKind;
+  loading: boolean;
+  error: string | null;
 }
 
 export class ConsoleError extends Error {

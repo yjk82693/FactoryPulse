@@ -1,13 +1,16 @@
 import { seedCatalog } from "./catalog";
-import { ConsoleError, type ConsoleCatalog, type MachineKind, type MachineRecord, type MotionProfile, type OperatingStatus, type SensingMode, type SensorLink } from "./types";
+import { ConsoleError, type ConsoleCatalog, type ConsoleMeta, type ConsoleSourceKind, type MachineKind, type MachineRecord, type MotionProfile, type OperatingStatus, type SensingMode, type SensorLink } from "./types";
 
 function cloneCatalog(catalog: ConsoleCatalog): ConsoleCatalog {
   return structuredClone(catalog);
 }
 
 export interface ConsoleStore {
+  readonly source: ConsoleSourceKind;
   subscribe: (listener: () => void) => () => void;
   getSnapshot: () => ConsoleCatalog;
+  getMeta: () => ConsoleMeta;
+  refresh(): Promise<void>;
   reset(): void;
   selectMachine(id: string | null): void;
   createMachine(input: {
@@ -16,25 +19,39 @@ export interface ConsoleStore {
     zoneId: string;
     status: OperatingStatus;
     profileId: string;
-  }): MachineRecord;
-  updateMachine(id: string, patch: Partial<Omit<MachineRecord, "id">>): MachineRecord;
-  deleteMachine(id: string): void;
-  createProfileFromTemplate(templateId: string, name: string): MotionProfile;
-  setCalibration(profileId: string, machineId: string, state: MotionProfile["calibrations"][0]["state"]): void;
+  }): MachineRecord | Promise<MachineRecord>;
+  updateMachine(id: string, patch: Partial<Omit<MachineRecord, "id">>): MachineRecord | Promise<MachineRecord>;
+  deleteMachine(id: string): void | Promise<void>;
+  createProfileFromTemplate(templateId: string, name: string): MotionProfile | Promise<MotionProfile>;
+  setCalibration(
+    profileId: string,
+    machineId: string,
+    state: MotionProfile["calibrations"][0]["state"],
+  ): void | Promise<void>;
   upsertLink(input: {
     id?: string;
     name: string;
     mode: SensingMode;
     zoneId: string;
     machineIds: string[];
-  }): SensorLink;
-  deleteLink(id: string): void;
+    physicalSensorId?: string | null;
+  }): SensorLink | Promise<SensorLink>;
+  deleteLink(id: string): void | Promise<void>;
 }
 
 export class MemoryConsoleStore implements ConsoleStore {
+  readonly source = "memory" as const;
   private catalog = seedCatalog();
   private seq = 100;
   private listeners = new Set<() => void>();
+
+  private readonly meta: ConsoleMeta = { source: "memory", loading: false, error: null };
+
+  getMeta = (): ConsoleMeta => this.meta;
+
+  refresh = async (): Promise<void> => {
+    /* In-memory mocks have no remote snapshot. */
+  };
 
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
@@ -182,6 +199,7 @@ export class MemoryConsoleStore implements ConsoleStore {
     mode: SensingMode;
     zoneId: string;
     machineIds: string[];
+    physicalSensorId?: string | null;
   }): SensorLink {
     const name = input.name.trim();
     if (!name) {
@@ -200,6 +218,7 @@ export class MemoryConsoleStore implements ConsoleStore {
       mode: input.mode,
       zoneId: input.zoneId,
       machineIds: unique,
+      physicalSensorId: input.physicalSensorId ?? null,
     };
     const others = this.catalog.links.filter((item) => item.id !== link.id);
     this.catalog.links = [...others, link];

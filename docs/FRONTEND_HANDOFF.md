@@ -47,7 +47,7 @@ App root: `frontend/`. Dev server: `http://localhost:5173`. Backend (Live): `htt
 | `/` | `LandingPage` | Public |
 | `/login` | `LoginPage` | Public. Auth0 redirect, or “Continue to dashboard” when `VITE_AUTH_DISABLED=true` |
 | `/dashboard` | `DashboardPage` | `ProtectedRoute`: skipped when auth disabled **or** Demo Mode; otherwise Auth0 session required |
-| `/machines` `/profiles` `/simulator` `/sensors` | Mock console pages | Same protection. In-memory `ConsoleStore` until v1.3 `/api/console/*` |
+| `/machines` `/profiles` `/simulator` `/sensors` | Console pages | Same protection. `MemoryConsoleStore` by default; `HttpConsoleStore` when Live + `VITE_CONSOLE_HTTP=true` |
 | `/optimizer` | Layout optimizer | Same protection. Example floor, not CSI |
 | `/optimizer/sensors` | Sensor-placement comparison | Illustrative cost/coverage/ambiguity scores |
 | `/access-denied` | `AccessDenied` | Public; used for company/membership failures |
@@ -62,7 +62,7 @@ App root: `frontend/`. Dev server: `http://localhost:5173`. Backend (Live): `htt
 - `DataSource` interface:
   - **DemoSource** — local contract-valid simulation. Zero network.
   - **LiveSource** — `GET /api/state` then WebSocket `/ws`, plus `/api/me` and `POST /api/alerts/{id}/ack`. Never falls back to demo data. Local FastAPI in `backend/` is auth-disabled in-memory only (`docs/live-csi.md`).
-- Console modules use a separate `ConsoleStore` (`frontend/src/console/`) with `MemoryConsoleStore`. Do not merge this into `streamReducer`. HTTP resources: Contract v1.3 `docs/event-schema.md` §§14–16.
+- Console modules use a separate `ConsoleStore` (`frontend/src/console/`). Default `MemoryConsoleStore`. Live Mode + `VITE_CONSOLE_HTTP=true` uses `HttpConsoleStore` (snake_case catalog). Failures do not fall back to mocks. Do not merge this into `streamReducer`. Contract v1.3 `docs/event-schema.md` §§14–16.
 
 ### Major UI components
 
@@ -71,8 +71,9 @@ App root: `frontend/`. Dev server: `http://localhost:5173`. Backend (Live): `htt
 | Brand | `components/BrandMark.tsx` |
 | Shell | `components/Header.tsx`, `DemoBanner.tsx` |
 | Cell | `MachineStatusCard`, `WorkflowStepper`, `ActivityIndicator`, `ActivityChart`, `StepDurationChart`, `EventTimeline` |
-| Alerts | `AlertPanel`, `AlertItem`, `VoiceButton` |
-| Voice | `hooks/useAlertVoice.ts` — POST voice, blob URL cache, single `HTMLAudioElement` |
+| Alerts | `AlertPanel`, `AlertItem`, `VoiceButton`, `ExplainButton` |
+| Voice | `hooks/useAlertVoice.ts` — POST voice, blob URL cache, play/pause/stop, single `HTMLAudioElement` |
+| Explain | `lib/explainBriefing.ts` — facts vs interpretations vs checks; never confirmed faults |
 | Auth | `auth/AuthGate.tsx`, `auth/tokenContext.ts`, `auth/useAccessToken.ts` |
 | API/WS | `services/api.ts`, `services/ws.ts` |
 | Types | `types/contract.ts` — mirrors live-cell contract (v1.2/v1.3 §§1–13) |
@@ -180,13 +181,14 @@ REST used by the SPA (Bearer unless auth disabled):
 - `GET /api/state`
 - `POST /api/alerts/{id}/ack`
 - `POST /api/alerts/{id}/voice` (blob)
-- `POST /api/alerts/{id}/explain` (hidden in Demo; 501 `explain_not_configured` when Gemini unset)
+- `POST /api/alerts/{id}/explain` (hidden in Demo; gated on `explain_enabled`; 501 when Gemini unset)
+- `GET /api/console/catalog` and other `/api/console/*` (only when `VITE_CONSOLE_HTTP=true`)
 
 WS `/ws` messages: `ready`, `state`, `event`, `alert`, `ping`. Client may send only `{ "type": "auth", "token" }` when Auth0 is on. Deltas are ignored until `ready`. Extra top-level event fields are invalid on the wire; the client does not send `company_id`.
 
 Unit coverage (mocked sockets/fetch): `api.test.ts`, `ws.test.ts`, `LiveSource.test.ts`, `streamReducer.test.ts`, `useFactoryStream.test.ts`, `DemoSource.test.ts`.
 
-**Not verified:** end-to-end against Developer B’s process (real `/health`, `/api/state`, WS ready/state/event, ack broadcast).
+**Verified (no ESP32):** Live REST + `/ws` against in-repo FastAPI (`9ea53e4`). **Not verified:** ESP32 serial E2E; Console HTTP (B not shipped); Auth0 JWT on this FastAPI; Gemini/ElevenLabs routes.
 
 ---
 

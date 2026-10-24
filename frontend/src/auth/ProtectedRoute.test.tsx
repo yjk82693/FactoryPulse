@@ -11,6 +11,7 @@ vi.mock("../config", async () => {
     getConfig: () => ({
       demoMode: false,
       authDisabled: false,
+      consoleHttp: false,
       apiUrl: "http://localhost:8000",
       wsUrl: "ws://localhost:8000/ws",
       auth0Domain: "example.auth0.com",

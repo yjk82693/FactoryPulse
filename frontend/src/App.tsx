@@ -1,6 +1,6 @@
 import { Outlet, Route, Routes } from "react-router-dom";
 import { AuthGate, ProtectedRoute } from "./auth/AuthGate";
-import { ConsoleProvider } from "./console/ConsoleContext";
+import { ConfiguredConsoleProvider } from "./console/ConsoleContext";
 import { LandingPage } from "./pages/LandingPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -16,9 +16,9 @@ import { NotFound } from "./pages/NotFound";
 function ProtectedConsole() {
   return (
     <ProtectedRoute>
-      <ConsoleProvider>
+      <ConfiguredConsoleProvider>
         <Outlet />
-      </ConsoleProvider>
+      </ConfiguredConsoleProvider>
     </ProtectedRoute>
   );
 }

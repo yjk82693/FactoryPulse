@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Alert } from "../types/contract";
+import type { Alert, Event, Step } from "../types/contract";
 import { AlertItem } from "./AlertItem";
 import styles from "./AlertPanel.module.css";
 
@@ -14,11 +14,27 @@ interface Props {
   alerts: Alert[];
   voiceEnabled: boolean;
   fetchVoice: ((alertId: string) => Promise<Blob>) | null;
+  explainEnabled?: boolean;
+  fetchExplain?: ((alertId: string) => Promise<{ explanation: string }>) | null;
+  machineId?: string | null;
+  currentStep?: Step | null;
+  events?: Event[];
   onAcknowledge: (alertId: string) => void;
   pendingId: string | null;
 }
 
-export function AlertPanel({ alerts, voiceEnabled, fetchVoice, onAcknowledge, pendingId }: Props) {
+export function AlertPanel({
+  alerts,
+  voiceEnabled,
+  fetchVoice,
+  explainEnabled = false,
+  fetchExplain = null,
+  machineId = null,
+  currentStep = null,
+  events = [],
+  onAcknowledge,
+  pendingId,
+}: Props) {
   const [expanded, setExpanded] = useState(false);
   const open = alerts
     .filter((item) => !item.acknowledged)
@@ -49,6 +65,11 @@ export function AlertPanel({ alerts, voiceEnabled, fetchVoice, onAcknowledge, pe
               alert={alert}
               voiceEnabled={voiceEnabled}
               fetchVoice={fetchVoice}
+              explainEnabled={explainEnabled}
+              fetchExplain={fetchExplain}
+              machineId={machineId}
+              currentStep={currentStep}
+              events={events}
               onAcknowledge={onAcknowledge}
               busy={pendingId === alert.alert_id}
             />

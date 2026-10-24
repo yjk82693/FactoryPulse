@@ -114,6 +114,7 @@ export interface State {
     persistence: Persistence;
     voice_enabled: boolean;
     explain_enabled: boolean;
+    console_enabled?: boolean;
   };
   company: { id: string; name: string };
   machine: {
