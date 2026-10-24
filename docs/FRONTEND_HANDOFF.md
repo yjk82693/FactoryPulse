@@ -249,9 +249,9 @@ Unfinished product work (not in this commit as features):
 - Remote: `https://github.com/yjk82693/FactoryTetris.git`
 - Branch: **`main`**
 - Previously on origin: `40c1410` `feat(frontend): harden live mode and implement Auth0`; `b77be50` P0 dashboard.
-- **This checkpoint commit:** `feat(frontend): add landing page, Auth0 integration, and voice controls`  
-  Hash: **see git log after commit; recorded below by the committing agent.**
-- **Push status: NOT pushed.** Do not `git push` unless Yoojun asks.
+- **This checkpoint commit:** `2a0ecaf` (`2a0ecaf9ceb1ed7921cb6e7ffe130ee4e2d41b3e`)  
+  `feat(frontend): add landing page, Auth0 integration, and voice controls`
+- `main` is **1 commit ahead of `origin/main`**. **Not pushed.** Do not `git push` unless Yoojun asks.
 
 ---
 
