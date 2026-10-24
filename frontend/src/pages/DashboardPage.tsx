@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getConfig } from "../config";
 import { useAccessToken } from "../auth/useAccessToken";
 import { DemoSource } from "../data/DemoSource";
@@ -13,41 +14,83 @@ import { ActivityIndicator } from "../components/ActivityIndicator";
 import { AlertPanel } from "../components/AlertPanel";
 import { EventTimeline } from "../components/EventTimeline";
 import { StepDurationChart } from "../components/StepDurationChart";
+import { ApiClientError } from "../services/api";
+import { NO_COMPANY_MESSAGE } from "../services/ws";
+import type { MeResponse } from "../types/contract";
 import styles from "./DashboardPage.module.css";
 
 export function DashboardPage() {
   const config = getConfig();
+  const navigate = useNavigate();
   const { getToken, userName } = useAccessToken();
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
+  const stableGetToken = useCallback(() => getTokenRef.current(), []);
+  const demoUserName = config.demoMode ? userName : null;
+
   const source = useMemo(() => {
     if (config.demoMode) {
       return new DemoSource({
         authDisabled: config.authDisabled,
-        authName: userName,
+        authName: demoUserName,
       });
     }
     return new LiveSource({
       apiUrl: config.apiUrl as string,
       wsUrl: config.wsUrl as string,
       authDisabled: config.authDisabled,
-      getToken,
+      getToken: stableGetToken,
     });
-  }, [config, getToken, userName]);
+  }, [config, demoUserName, stableGetToken]);
 
   const stream = useFactoryStream(source);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [me, setMe] = useState<MeResponse | null>(null);
+
+  useEffect(() => {
+    if (config.demoMode || !(source instanceof LiveSource)) {
+      return;
+    }
+    let cancelled = false;
+    void source
+      .fetchMe()
+      .then((identity) => {
+        if (!cancelled) {
+          setMe(identity);
+        }
+      })
+      .catch((error: unknown) => {
+        if (error instanceof ApiClientError && error.status === 403) {
+          navigate("/access-denied", { replace: true });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [source, config.demoMode, navigate]);
+
+  useEffect(() => {
+    if (stream.status === "error" && stream.statusDetail === NO_COMPANY_MESSAGE) {
+      navigate("/access-denied", { replace: true });
+    }
+  }, [stream.status, stream.statusDetail, navigate]);
 
   const companyName = config.demoMode
     ? `${stream.state?.company.name ?? stream.ready?.company.name ?? "Demo Manufacturing"} (demo data)`
-    : (stream.state?.company.name ?? stream.ready?.company.name ?? "—");
+    : (me?.company.name ?? stream.state?.company.name ?? stream.ready?.company.name ?? "—");
   const resolvedUser =
+    me?.user.name ??
     stream.ready?.user.name ??
     userName ??
     (config.authDisabled && config.demoMode ? "Demo Operator" : config.authDisabled ? "Dev User" : "—");
+  const role = config.demoMode ? null : (me?.role ?? null);
 
   async function onAcknowledge(alertId: string): Promise<void> {
     setPendingId(alertId);
     try {
       await stream.acknowledge(alertId);
+    } catch {
+      /* Rollback is handled in the stream hook. Keep last known alerts visible. */
     } finally {
       setPendingId(null);
     }
@@ -62,6 +105,7 @@ export function DashboardPage() {
       <Header
         companyName={companyName}
         userName={resolvedUser}
+        role={role}
         status={stream.status}
         statusDetail={stream.statusDetail}
       />

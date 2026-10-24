@@ -7,49 +7,7 @@ import {
   shouldApplyMessage,
 } from "./ws";
 import type { WsMessage } from "../types/contract";
-
-class FakeSocket {
-  static instances: FakeSocket[] = [];
-  url: string;
-  sent: string[] = [];
-  private listeners: Record<string, Array<(event: { data?: string; code?: number }) => void>> = {
-    open: [],
-    message: [],
-    close: [],
-    error: [],
-  };
-
-  constructor(url: string | URL) {
-    this.url = String(url);
-    FakeSocket.instances.push(this);
-  }
-
-  addEventListener(type: string, fn: (event: { data?: string; code?: number }) => void): void {
-    this.listeners[type]?.push(fn);
-  }
-
-  send(data: string): void {
-    this.sent.push(data);
-  }
-
-  close(code = 1000): void {
-    for (const fn of this.listeners.close ?? []) {
-      fn({ code });
-    }
-  }
-
-  open(): void {
-    for (const fn of this.listeners.open ?? []) {
-      fn({});
-    }
-  }
-
-  push(data: string): void {
-    for (const fn of this.listeners.message ?? []) {
-      fn({ data });
-    }
-  }
-}
+import { FakeSocket } from "../test/fakeSocket";
 
 function connect(authDisabled: boolean, getToken?: () => Promise<string | null>) {
   const messages: WsMessage[] = [];
@@ -157,5 +115,89 @@ describe("ws protocol", () => {
       user: { id: "a", name: "A" },
       company: { id: "demo-co", name: "Demo Manufacturing" },
     } })).toBe(true);
+  });
+
+  it("ignores malformed payloads", () => {
+    const { fake, messages } = connect(true);
+    fake.open();
+    fake.push("not-json");
+    fake.push(JSON.stringify({ type: "mystery" }));
+    fake.push(
+      JSON.stringify({
+        type: "ready",
+        data: {
+          auth_mode: "disabled",
+          user: { id: "dev-user", name: "Dev User" },
+          company: { id: "demo-co", name: "Demo Manufacturing" },
+        },
+      }),
+    );
+    fake.push("{");
+    expect(messages).toHaveLength(1);
+  });
+
+  it("treats 45s of silence as a dead connection", () => {
+    vi.useFakeTimers();
+    const { fake } = connect(true);
+    fake.open();
+    fake.push(
+      JSON.stringify({
+        type: "ready",
+        data: {
+          auth_mode: "disabled",
+          user: { id: "dev-user", name: "Dev User" },
+          company: { id: "demo-co", name: "Demo Manufacturing" },
+        },
+      }),
+    );
+    expect(FakeSocket.instances).toHaveLength(1);
+    vi.advanceTimersByTime(44_999);
+    expect(FakeSocket.instances).toHaveLength(1);
+    vi.advanceTimersByTime(1);
+    expect(FakeSocket.instances).toHaveLength(1);
+    vi.advanceTimersByTime(1000);
+    expect(FakeSocket.instances).toHaveLength(2);
+  });
+
+  it("resets silence on ping after ready", () => {
+    vi.useFakeTimers();
+    const { fake, messages } = connect(true);
+    fake.open();
+    fake.push(
+      JSON.stringify({
+        type: "ready",
+        data: {
+          auth_mode: "disabled",
+          user: { id: "dev-user", name: "Dev User" },
+          company: { id: "demo-co", name: "Demo Manufacturing" },
+        },
+      }),
+    );
+    vi.advanceTimersByTime(40_000);
+    fake.push(JSON.stringify({ type: "ping" }));
+    expect(messages.some((message) => message.type === "ping")).toBe(true);
+    vi.advanceTimersByTime(40_000);
+    expect(FakeSocket.instances).toHaveLength(1);
+  });
+
+  it("retries 4401 once when auth is enabled", async () => {
+    const getToken = vi.fn(async () => "token-123");
+    const { fake } = connect(false, getToken);
+    fake.open();
+    await Promise.resolve();
+    fake.close(4401);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(FakeSocket.instances.length).toBeGreaterThanOrEqual(2);
+    expect(getToken).toHaveBeenCalled();
+  });
+
+  it("does not reconnect after stop", () => {
+    vi.useFakeTimers();
+    const { fake, socket } = connect(true);
+    fake.open();
+    socket.stop();
+    vi.advanceTimersByTime(20_000);
+    expect(FakeSocket.instances).toHaveLength(1);
   });
 });

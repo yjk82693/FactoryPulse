@@ -51,12 +51,31 @@ export function createApiClient(options: ApiClientOptions) {
 
   async function request(path: string, init: RequestInit = {}): Promise<Response> {
     const merged = new Headers(await headers(init.headers));
-    const response = await fetch(`${options.baseUrl}${path}`, {
-      ...init,
-      headers: merged,
-    });
+    if (init.body && !merged.has("Content-Type")) {
+      merged.set("Content-Type", "application/json");
+    }
+    let response: Response;
+    try {
+      response = await fetch(`${options.baseUrl}${path}`, {
+        ...init,
+        headers: merged,
+      });
+    } catch {
+      throw new ApiClientError("Unable to reach the FactoryPulse API", "network_error", 0);
+    }
     if (!response.ok) {
-      throw await parseError(response);
+      const error = await parseError(response);
+      if (error.status === 401 && error.code === "request_failed") {
+        throw new ApiClientError(
+          "Session expired or auth configuration mismatch",
+          "unauthenticated",
+          401,
+        );
+      }
+      if (error.status === 403 && error.code === "request_failed") {
+        throw new ApiClientError("No access to this company", "forbidden", 403);
+      }
+      throw error;
     }
     return response;
   }

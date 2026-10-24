@@ -15,11 +15,12 @@ const STATUS_LABEL: Record<ConnectionStatus, string> = {
 interface Props {
   companyName: string;
   userName: string;
+  role?: string | null;
   status: ConnectionStatus;
   statusDetail: string | null;
 }
 
-export function Header({ companyName, userName, status, statusDetail }: Props) {
+export function Header({ companyName, userName, role, status, statusDetail }: Props) {
   const config = getConfig();
   return (
     <header className={styles.header}>
@@ -33,7 +34,10 @@ export function Header({ companyName, userName, status, statusDetail }: Props) {
           {STATUS_LABEL[status]}
         </span>
         {config.authDisabled ? <span className={styles.badge}>Auth disabled (dev)</span> : null}
-        <span className={styles.user}>{userName}</span>
+        <span className={styles.user}>
+          {userName}
+          {role ? ` · ${role}` : ""}
+        </span>
         {!config.authDisabled ? <LogoutButton /> : null}
       </div>
     </header>

@@ -75,4 +75,37 @@ describe("streamReducer", () => {
     expect(snap.state?.alerts).toHaveLength(1);
     expect(snap.state?.alerts[0]?.acknowledged).toBe(true);
   });
+
+  it("ignores duplicate event ids", () => {
+    let snap = streamReducer(initialStream, { type: "state", state: makeState() });
+    const event = makeEvent({ event_id: "dup" });
+    snap = streamReducer(snap, { type: "event", event });
+    const again = streamReducer(snap, {
+      type: "event",
+      event: { ...event, payload: { step: "MOVE", cycle_id: 9 } },
+    });
+    expect(again.events).toHaveLength(1);
+    expect(again.state?.machine.current_step).toBe("PICK");
+  });
+
+  it("keeps last known state while reconnecting", () => {
+    let snap = streamReducer(initialStream, { type: "state", state: makeState() });
+    snap = streamReducer(snap, { type: "status", status: "reconnecting", detail: "retrying" });
+    expect(snap.state?.machine.cycle_id).toBe(12);
+    expect(snap.status).toBe("reconnecting");
+  });
+
+  it("acknowledges optimistically and rolls back", () => {
+    const alert = makeAlert();
+    let snap = streamReducer(initialStream, { type: "state", state: makeState({ alerts: [alert] }) });
+    snap = streamReducer(snap, {
+      type: "ack-optimistic",
+      alertId: alert.alert_id,
+      acknowledgedBy: "dev-user",
+      acknowledgedAt: "2026-10-24T18:31:00.000Z",
+    });
+    expect(snap.state?.alerts[0]?.acknowledged).toBe(true);
+    snap = streamReducer(snap, { type: "ack-rollback", alert });
+    expect(snap.state?.alerts[0]?.acknowledged).toBe(false);
+  });
 });

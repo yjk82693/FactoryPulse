@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import type { DataSource } from "../data/DataSource";
 import { initialStream, streamReducer } from "../state/streamReducer";
 
 export function useFactoryStream(source: DataSource) {
   const [snapshot, dispatch] = useReducer(streamReducer, initialStream);
+  const snapshotRef = useRef(snapshot);
+  snapshotRef.current = snapshot;
 
   useEffect(() => {
     const unsubscribe = source.subscribe({
@@ -22,7 +24,26 @@ export function useFactoryStream(source: DataSource) {
 
   const acknowledge = useCallback(
     async (alertId: string) => {
-      await source.acknowledge(alertId);
+      const current = snapshotRef.current.state?.alerts.find((item) => item.alert_id === alertId);
+      const acknowledgedBy = snapshotRef.current.ready?.user.name ?? "operator";
+      const acknowledgedAt = new Date().toISOString();
+      if (current && !current.acknowledged) {
+        dispatch({
+          type: "ack-optimistic",
+          alertId,
+          acknowledgedBy,
+          acknowledgedAt,
+        });
+      }
+      try {
+        const updated = await source.acknowledge(alertId);
+        dispatch({ type: "alert", alert: updated });
+      } catch (error) {
+        if (current) {
+          dispatch({ type: "ack-rollback", alert: current });
+        }
+        throw error;
+      }
     },
     [source],
   );

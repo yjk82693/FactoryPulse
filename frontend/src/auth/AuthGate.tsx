@@ -38,7 +38,12 @@ function Auth0TokenBridge({ children }: { children: ReactNode }) {
   const { getAccessTokenSilently, user } = useAuth0();
   const value = useMemo(
     () => ({
-      getToken: async () => (await getAccessTokenSilently()) ?? null,
+      getToken: async () =>
+        (await getAccessTokenSilently({
+          authorizationParams: {
+            audience: getConfig().auth0Audience ?? undefined,
+          },
+        })) ?? null,
       userName: user?.name ?? user?.nickname ?? null,
     }),
     [getAccessTokenSilently, user],

@@ -9,6 +9,7 @@ export type ConnectionStatus =
   | "error";
 
 export const MAX_EVENTS = 200;
+export const MAX_SAMPLES = 240;
 export const SAMPLE_WINDOW_MS = 120_000;
 export const DEFAULT_THRESHOLD = 0.55;
 
@@ -33,7 +34,9 @@ export type StreamAction =
   | { type: "ready"; ready: Ready }
   | { type: "state"; state: State }
   | { type: "event"; event: Event; now?: number }
-  | { type: "alert"; alert: Alert };
+  | { type: "alert"; alert: Alert }
+  | { type: "ack-optimistic"; alertId: string; acknowledgedBy: string; acknowledgedAt: string }
+  | { type: "ack-rollback"; alert: Alert };
 
 export const initialStream: StreamSnapshot = {
   status: "connecting",
@@ -153,11 +156,38 @@ export function streamReducer(state: StreamSnapshot, action: StreamAction): Stre
         state: action.state,
         events: mergeEvents(state.events, action.state.recent_events),
       };
+    case "ack-optimistic": {
+      if (!state.state) {
+        return state;
+      }
+      const current = state.state.alerts.find((item) => item.alert_id === action.alertId);
+      if (!current || current.acknowledged) {
+        return state;
+      }
+      const alert: Alert = {
+        ...current,
+        acknowledged: true,
+        acknowledged_by: action.acknowledgedBy,
+        acknowledged_at: action.acknowledgedAt,
+      };
+      return {
+        ...state,
+        state: { ...state.state, alerts: sortAlerts(upsertAlert(state.state.alerts, alert)) },
+      };
+    }
+    case "ack-rollback":
+      if (!state.state) {
+        return state;
+      }
+      return {
+        ...state,
+        state: { ...state.state, alerts: sortAlerts(upsertAlert(state.state.alerts, action.alert)) },
+      };
     case "event": {
-      const events = [action.event, ...state.events.filter((item) => item.event_id !== action.event.event_id)].slice(
-        0,
-        MAX_EVENTS,
-      );
+      if (state.events.some((item) => item.event_id === action.event.event_id)) {
+        return state;
+      }
+      const events = [action.event, ...state.events].slice(0, MAX_EVENTS);
       let samples = state.samples;
       const payload = asRecord(action.event.payload);
       if (
@@ -176,7 +206,9 @@ export function streamReducer(state: StreamSnapshot, action: StreamAction): Stre
             threshold,
             active: action.event.event_type === "ACTIVITY_DETECTED" || score >= threshold,
           },
-        ].filter((sample) => sample.t >= now - SAMPLE_WINDOW_MS);
+        ]
+          .filter((sample) => sample.t >= now - SAMPLE_WINDOW_MS)
+          .slice(-MAX_SAMPLES);
       }
       return {
         ...state,

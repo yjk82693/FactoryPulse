@@ -1,14 +1,15 @@
 import type { DataListener, DataSource } from "./DataSource";
-import type { Alert, State } from "../types/contract";
+import type { Alert, MeResponse, State } from "../types/contract";
 import type { ConnectionStatus } from "../state/streamReducer";
-import { createApiClient, type ApiClient } from "../services/api";
-import { FactorySocket } from "../services/ws";
+import { ApiClientError, createApiClient, type ApiClient } from "../services/api";
+import { AUTH_MISMATCH_MESSAGE, FactorySocket, NO_COMPANY_MESSAGE } from "../services/ws";
 
 export interface LiveSourceOptions {
   apiUrl: string;
   wsUrl: string;
   authDisabled: boolean;
   getToken?: () => Promise<string | null>;
+  webSocketCtor?: new (url: string | URL) => Pick<WebSocket, "addEventListener" | "send" | "close">;
 }
 
 export class LiveSource implements DataSource {
@@ -45,6 +46,10 @@ export class LiveSource implements DataSource {
     this.socket = null;
   }
 
+  fetchMe(): Promise<MeResponse> {
+    return this.api.requestJson<MeResponse>("/api/me");
+  }
+
   acknowledge(alertId: string): Promise<Alert> {
     return this.api.requestJson<Alert>(`/api/alerts/${alertId}/ack`, { method: "POST" });
   }
@@ -63,8 +68,16 @@ export class LiveSource implements DataSource {
     try {
       const state = await this.api.requestJson<State>("/api/state");
       this.emitState(state);
-    } catch {
-      this.emitStatus("reconnecting", "Unable to load machine state");
+    } catch (error) {
+      if (error instanceof ApiClientError && error.status === 401) {
+        this.emitStatus("error", AUTH_MISMATCH_MESSAGE);
+      } else if (error instanceof ApiClientError && error.status === 403) {
+        this.emitStatus("error", NO_COMPANY_MESSAGE);
+      } else if (error instanceof ApiClientError && error.status === 0) {
+        this.emitStatus("offline", error.detail);
+      } else {
+        this.emitStatus("reconnecting", "Unable to load machine state");
+      }
     }
     this.connectSocket();
   }
@@ -74,7 +87,14 @@ export class LiveSource implements DataSource {
       url: this.options.wsUrl,
       authDisabled: this.options.authDisabled,
       getToken: this.options.getToken,
+      webSocketCtor: this.options.webSocketCtor,
       onStatus: (status, detail) => {
+        if (
+          status === "connecting" &&
+          (this.status === "reconnecting" || this.status === "offline" || this.status === "error")
+        ) {
+          return;
+        }
         this.emitStatus(status, detail);
       },
       onMessage: (message) => {
