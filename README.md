@@ -2,9 +2,9 @@
 
 **Detect → Alert → Optimize** for a single assembly cell.
 
-FactoryPulse connects machine execution with activity sensing so operators see not only what the cell is doing, but what is happening around it. A simulated assembly workflow and activity events feed one live dashboard, with rule-based alerts, Gemini explanations, ElevenLabs spoken briefings, and Tiger Data history.
+FactoryPulse connects machine execution with activity sensing so operators see not only what the cell is doing, but what is happening around it. The assembly **machine remains software-simulated**. Activity sensing is **real ESP32 Wi-Fi CSI**: on **24 October 2026** the team demonstrated ESP32 TX/RX → `csi_stream.py` → FastAPI → the live dashboard, with movement-related `ACTIVITY_*` events appearing in real time. That experiment ran on a **teammate’s computer**; **video was recorded**. It is a prototype demonstration, not measured detection accuracy, not environmental reliability, and not certified safety monitoring. CSI→Tiger Data was **not** verified in that session.
 
-This is a HackPSU Fall 2026 prototype, not a certified industrial safety system. Wi-Fi CSI observes radio-channel change associated with motion. It does not identify people, measure precise location, or confirm hazards. The assembly machine is simulated.
+This is a HackPSU Fall 2026 prototype. Wi-Fi CSI observes radio-channel change associated with motion. It does not identify people, measure precise location, or confirm hazards. Rule-based alerts, Gemini explanations, ElevenLabs spoken briefings, and optional Tiger Data history share one dashboard. A software-only path can still inject `method: simulated` activity when hardware is not connected.
 
 **[Devpost project](https://devpost.com/software/factorypulse-smart-assembly-cell-intelligence)** · Contract: [`docs/event-schema.md`](docs/event-schema.md) v1.3 · Judging notes: [`docs/DEMO.md`](docs/DEMO.md)
 
@@ -34,7 +34,7 @@ Gemini and ElevenLabs **explain and speak** alerts. They never decide whether an
 - **Tiger Data** (PostgreSQL / TimescaleDB) persistent events and alert state when `DATABASE_URL` is set
 - **Auth0** Universal Login (verified locally; presentation demo uses auth disabled)
 - Layout optimizer on example inputs
-- ESP32 TX/RX firmware and Python CSI pipeline (`sensing/`, `firmware/`) — physical serial-to-dashboard ingest demonstrated (see Verified integrations)
+- ESP32 TX/RX firmware in `sensing/processing/csi_tx` and `sensing/processing/csi_rx` plus Python CSI client `sensing/processing/python/csi_stream.py` — physical serial-to-dashboard ingest demonstrated 24 October 2026 (`firmware/` is a placeholder only)
 
 ---
 
@@ -61,7 +61,7 @@ Gemini and ElevenLabs **explain and speak** alerts. They never decide whether an
                                          ElevenLabs TTS
 ```
 
-\*Firmware lives under `sensing/processing/csi_tx` and `csi_rx` (`firmware/` is a placeholder). On **24 October 2026** the team demonstrated live serial CSI (`method: wifi_csi`) through `csi_stream.py` → FastAPI → the dashboard on a **teammate’s computer** and recorded video. That is a team-confirmed physical experiment, not an automated test. The assembly machine remains simulated. A software-only judging path can still inject `method: simulated` events. CSI→Tiger Data was **not** part of that session.
+\*Implemented firmware: `sensing/processing/csi_tx` and `sensing/processing/csi_rx`. `firmware/` is an empty placeholder. On **24 October 2026** the team demonstrated live serial CSI (`method: wifi_csi`) through `csi_stream.py` → FastAPI → the dashboard on a **teammate’s computer** and recorded video. That is a team-confirmed physical experiment, not an automated test. The assembly machine remains simulated. A software-only judging path can still inject `method: simulated` events. CSI→Tiger Data was **not** part of that session.
 
 - There is **no Vite proxy**. The SPA calls `VITE_API_URL` / `VITE_WS_URL`. CORS allows `http://localhost:5173` and `http://127.0.0.1:5173`.
 - **Live Mode** talks only to FastAPI. **Demo Mode** never calls the network. There is no Live→Demo fallback.
@@ -70,7 +70,7 @@ Gemini and ElevenLabs **explain and speak** alerts. They never decide whether an
 
 | Path | Role |
 |---|---|
-| `firmware/`, `sensing/` | ESP32 TX/RX, CSI processing, ingest client |
+| `sensing/processing/csi_tx`, `sensing/processing/csi_rx`, `sensing/processing/python/` | ESP32 TX/RX firmware, CSI scoring, ingest client. `firmware/` is a placeholder |
 | `backend/` | FastAPI hub, machine sim, ingest, Console HTTP, Auth0 JWT, optional `DATABASE_URL` |
 | `backend/ai/` | Gemini explain and ElevenLabs voice |
 | `frontend/` | Dashboard, Auth0 SPA, Explain/Listen, optimizer |
@@ -87,7 +87,7 @@ Gemini and ElevenLabs **explain and speak** alerts. They never decide whether an
 | Persistence | Tiger Data (PostgreSQL + TimescaleDB), or in-memory if `DATABASE_URL` is unset |
 | Auth | Auth0 Universal Login; FastAPI validates RS256 access tokens |
 | AI / voice | Gemini API, ElevenLabs TTS (backend only) |
-| Sensing | ESP32 firmware, NumPy / PySerial CSI client |
+| Sensing | ESP32-S3 firmware (`sensing/processing/csi_tx`, `sensing/processing/csi_rx`), NumPy / PySerial CSI client |
 | Tests | `unittest` (backend, sensing), Vitest (frontend) |
 
 ---
