@@ -58,6 +58,24 @@ describe("useAlertVoice", () => {
     expect(result.current.status).toBe("error");
   });
 
+  it("surfaces ElevenLabs 502 detail", async () => {
+    stubMedia();
+    const fetchVoice = vi.fn(async () => {
+      throw new ApiClientError(
+        "ElevenLabs plan does not allow this voice via the API",
+        "voice_upstream_error",
+        502,
+      );
+    });
+    const { result } = renderHook(() => useAlertVoice("alert-1", fetchVoice));
+    await act(async () => {
+      result.current.play();
+      await Promise.resolve();
+    });
+    expect(result.current.error).toBe("ElevenLabs plan does not allow this voice via the API");
+    expect(result.current.disabledReason).toBeNull();
+  });
+
   it("blocks a second request while loading", async () => {
     stubMedia();
     let resolve!: (blob: Blob) => void;

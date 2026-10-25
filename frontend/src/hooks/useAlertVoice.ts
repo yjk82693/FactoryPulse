@@ -44,6 +44,9 @@ export function mapVoiceError(error: unknown): { message: string; disable: boole
       return { message: "Alert no longer available", disable: false };
     }
     if (error.status === 502 || error.status === 504) {
+      if (error.detail.includes("ElevenLabs")) {
+        return { message: error.detail, disable: false };
+      }
       return { message: "Voice service unavailable, try again", disable: false };
     }
     if (error.status === 401 || error.status === 403) {

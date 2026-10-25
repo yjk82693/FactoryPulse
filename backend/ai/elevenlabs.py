@@ -77,6 +77,8 @@ def synthesize(alert_id: str, spoken: str) -> tuple[bytes, bool]:
             code = inner.get('code') if isinstance(inner, dict) else None
             if code == 'invalid_api_key':
                 detail = 'ElevenLabs API key is invalid'
+            elif code == 'paid_plan_required':
+                detail = 'ElevenLabs plan does not allow this voice via the API'
         except ValueError:
             pass
         raise VoiceError('voice_upstream_error', detail)
