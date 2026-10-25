@@ -50,6 +50,7 @@ export interface ActivityLevelPayload {
   activity_score: number;
   method: Method;
   baseline: number;
+  threshold?: number | null;
 }
 
 export interface ActivityDetectedPayload {

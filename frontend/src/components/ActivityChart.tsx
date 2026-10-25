@@ -3,7 +3,6 @@ import {
   Line,
   LineChart,
   ReferenceArea,
-  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -12,7 +11,6 @@ import {
 import type { Method } from "../types/contract";
 import { sensorMethodLabel } from "../lib/sensorLabel";
 import type { ActivitySample } from "../state/streamReducer";
-import { DEFAULT_THRESHOLD } from "../state/streamReducer";
 import styles from "./ActivityChart.module.css";
 
 interface Props {
@@ -24,7 +22,6 @@ interface Props {
 
 export function ActivityChart({ samples, method, connected, backendLive }: Props) {
   const now = Date.now();
-  const threshold = samples[samples.length - 1]?.threshold ?? DEFAULT_THRESHOLD;
   const methodLabel = sensorMethodLabel(method, samples.length > 0);
   const data = samples.map((sample) => ({
     t: sample.t,
@@ -52,14 +49,14 @@ export function ActivityChart({ samples, method, connected, backendLive }: Props
       <div className={styles.head}>
         <div>
           <div className="panel-title">
-            {methodLabel} · last 120s
+            {methodLabel} · last 30s
           </div>
           <div className="panel-subtitle">
             {backendLive && connected
-              ? "Activity score 0–1 with detection threshold"
+              ? "Activity score 0-0.075; shaded areas show detected activity"
               : data.length > 0
                 ? "Frozen last samples · not a live reading"
-                : "Activity score 0–1 with detection threshold"}
+                : "Activity score 0-0.075; shaded areas show detected activity"}
           </div>
         </div>
         {backendLive && !connected ? <div className={styles.disconnected}>Sensor disconnected</div> : null}
@@ -68,22 +65,24 @@ export function ActivityChart({ samples, method, connected, backendLive }: Props
         <div className={styles.empty}>Waiting for activity samples</div>
       ) : (
         <div className={styles.chartBody}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
               <CartesianGrid stroke="#2a2f38" strokeDasharray="3 3" />
               <XAxis
                 dataKey="t"
                 type="number"
-                domain={[now - 120000, now]}
+                domain={[now - 30000, now]}
+                allowDataOverflow
                 tickFormatter={(value: number) => `${Math.round((value - now) / 1000)}s`}
                 stroke="#6d7580"
                 minTickGap={32}
               />
               <YAxis
-                domain={[0, 1]}
-                ticks={[0, 0.25, 0.5, 0.75, 1]}
+                domain={[0, 0.075]}
+                allowDataOverflow
+                ticks={[0, 0.015, 0.03, 0.045, 0.06, 0.075]}
                 interval={0}
-                width={40}
+                width={48}
                 stroke="#6d7580"
               />
               <Tooltip
@@ -102,7 +101,6 @@ export function ActivityChart({ samples, method, connected, backendLive }: Props
                   strokeOpacity={0}
                 />
               ))}
-              <ReferenceLine y={threshold} stroke="#F59E0B" strokeDasharray="4 4" />
               <Line
                 type="monotone"
                 dataKey="score"

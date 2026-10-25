@@ -9,14 +9,15 @@ export type ConnectionStatus =
   | "error";
 
 export const MAX_EVENTS = 200;
-export const MAX_SAMPLES = 240;
+// Ten level readings/second plus transition events across the two-minute window.
+export const MAX_SAMPLES = 1440;
 export const SAMPLE_WINDOW_MS = 120_000;
 export const DEFAULT_THRESHOLD = 0.55;
 
 export interface ActivitySample {
   t: number;
   score: number;
-  threshold: number;
+  threshold: number | null;
   active: boolean;
 }
 
@@ -78,14 +79,14 @@ function sortAlerts(alerts: Alert[]): Alert[] {
   return [...open, ...acknowledged];
 }
 
-function lastThreshold(samples: ActivitySample[]): number {
+function lastThreshold(samples: ActivitySample[]): number | null {
   for (let i = samples.length - 1; i >= 0; i -= 1) {
     const sample = samples[i];
     if (sample) {
       return sample.threshold;
     }
   }
-  return DEFAULT_THRESHOLD;
+  return null;
 }
 
 function asRecord(payload: Event["payload"]): Record<string, unknown> {
@@ -131,9 +132,6 @@ function applyEventToState(state: State, event: Event): State {
         next.sensor.active = true;
       } else if (event.event_type === "ACTIVITY_CLEARED") {
         next.sensor.active = false;
-      } else {
-        const threshold = lastThreshold([]);
-        next.sensor.active = score >= (typeof payload.threshold === "number" ? payload.threshold : threshold);
       }
       break;
     }
@@ -192,7 +190,8 @@ export function streamReducer(state: StreamSnapshot, action: StreamAction): Stre
       const payload = asRecord(action.event.payload);
       if (
         action.event.event_type === "ACTIVITY_LEVEL" ||
-        action.event.event_type === "ACTIVITY_DETECTED"
+        action.event.event_type === "ACTIVITY_DETECTED" ||
+        action.event.event_type === "ACTIVITY_CLEARED"
       ) {
         const now = action.now ?? Date.parse(action.event.timestamp);
         const threshold =
@@ -204,7 +203,9 @@ export function streamReducer(state: StreamSnapshot, action: StreamAction): Stre
             t: now,
             score,
             threshold,
-            active: action.event.event_type === "ACTIVITY_DETECTED" || score >= threshold,
+            active: action.event.event_type === "ACTIVITY_CLEARED" ? false :
+              action.event.event_type === "ACTIVITY_DETECTED" ||
+              (state.state?.sensor.active ?? samples[samples.length - 1]?.active ?? false),
           },
         ]
           .filter((sample) => sample.t >= now - SAMPLE_WINDOW_MS)

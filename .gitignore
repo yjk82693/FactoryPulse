@@ -9,6 +9,7 @@ venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+.sensing-test-deps/
 .backend-test-db/
 
 # node

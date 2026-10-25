@@ -67,6 +67,8 @@
 
 .activityChart {
   flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
   min-height: 240px;
 }
 
