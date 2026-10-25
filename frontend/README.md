@@ -135,9 +135,8 @@ Frontend `redirect_uri` is `window.location.origin` (`http://localhost:5173`). A
 
 | | |
 |---|---|
-| Verified | Demo dashboard, optimizer example, unit tests, build, Auth0 login redirect, Live Mode REST+WS against local FastAPI (auth disabled, no ESP32) |
-| Implemented, not hardware E2E | `wifi_csi` labels, voice button against real MP3, Auth0 access token vs API |
-| Pending | Auth0 on B’s server, ElevenLabs/Gemini endpoints, ESP32 serial ingest |
+| Verified in software tests | Demo dashboard, optimizer example, unit tests, build, Auth0 login redirect, Live Mode REST+WS against local FastAPI (auth disabled). The SPA does not read ESP32 serial. |
+| Team-confirmed physical (24 Oct 2026) | Live dashboard showed movement-related activity from ESP32 → `csi_stream.py` → FastAPI (`method: wifi_csi`). Teammate’s computer; video recorded. Prototype path only — not accuracy, reliability, safety certification, or CSI→Tiger. |
 | Simulated | DemoSource, Live machine sim, optimizer scenario, mock Console |
 
-Prototype only: the machine is simulated. Wi-Fi CSI activity is an operational observation, not certified safety monitoring.
+Prototype only: the machine is simulated. Wi-Fi CSI activity is an operational observation, not certified safety monitoring. Call the chart **Wi-Fi CSI** only after live `wifi_csi` samples arrive; otherwise it is waiting or **Simulated sensor**.

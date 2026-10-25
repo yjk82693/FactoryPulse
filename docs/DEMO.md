@@ -10,12 +10,10 @@ Prototype only. The assembly machine is simulated. Wi-Fi CSI is an operational o
 
 | Kind | What judges will see |
 |---|---|
-| **Verified (this frontend)** | Landing, login entry, Demo Mode dashboard, alerts + local ack, layout optimizer with example data, connection/stale UI, Auth0 Universal Login redirect (callback/JWT vs API not fully verified) |
-| **Verified against B’s local FastAPI (no ESP32)** | Live Mode `GET /api/state`, `/api/me`, `/api/events`, `/api/alerts`, `POST /api/alerts/{id}/ack`, WebSocket `/ws` (`ready` then `state`). Machine sim on dashboard. See `docs/live-csi.md`. |
-| **Implemented, not hardware E2E** | `method: wifi_csi` labeling, CSI ingest client `csi_stream.py`, ElevenLabs voice **UI**, Gemini explain **UI** (facts vs interpretations vs checks) |
-| **Pending B** | Auth0 JWT on FastAPI, Tiger Data |
+| **Verified (this frontend)** | Landing, login entry, Demo Mode dashboard, alerts + local ack, layout optimizer with example data, connection/stale UI, Auth0 Universal Login redirect |
+| **Verified in software tests (no ESP32)** | Live Mode `GET /api/state`, `/api/me`, `/api/events`, `/api/alerts`, `POST /api/alerts/{id}/ack`, WebSocket `/ws` (`ready` then `state`). Machine sim on dashboard. Synthetic ingest for `ACTIVITY_REVIEW`. See `docs/live-csi.md`. |
+| **Team-confirmed physical (24 Oct 2026)** | ESP32 serial → `csi_stream.py` → FastAPI → live dashboard; movement-related `ACTIVITY_*` in real time. Teammate’s computer; video recorded. Prototype path only — not accuracy, reliability, or safety certification. CSI→Tiger **not** verified in that session. |
 | **Voice/explain backend** | C-owned `backend/ai/` routes. Voice: 200 MP3 when ElevenLabs env is set and the account allows the voice. Explain: 200 when `GEMINI_API_KEY` is set (`GEMINI_MODEL` defaults to `gemini-3.5-flash-lite`, free-tier Flash-Lite). Unset Gemini → 501. |
-| **Pending A** | ESP32 serial → dashboard (needs flashed RX + `csi_stream.py`). Not a verified hardware E2E |
 | **Simulated / example** | DemoSource; Live machine sim (`machine.simulated`). Optimizer floor. Console **in-memory** unless Live + `VITE_CONSOLE_HTTP=true` |
 
 Do not say CSI caused a machine failure. Alerts are for operator review.
@@ -42,7 +40,7 @@ Open http://localhost:5173
 3. **Alerts (30s)** — During ASSEMBLE, an `ACTIVITY_REVIEW` may appear (warning, review copy). **Acknowledge**. Voice stays disabled: “Voice alerts require Live Mode”.
 4. **Optimizer (45s)** — Header **Optimizer**. Example floor (not CSI coordinates). Click **Optimize Layout**. Expect a real algorithm drop (example baseline **418** → **247**, about **41%**). Swap two stations: suggestion clears. **Reset**. Optional: **Sensor placement** tab compares dedicated vs shared-zone cost/ambiguity (illustrative, not RF).
 5. **Console extras (optional 30s)** — **Machines** registry CRUD (in-memory unless Live + `VITE_CONSOLE_HTTP=true`), **Simulator** sustained deviation → review alert (not a fault), **Sensors** shared-zone overlap warning.
-6. **Close (15s)** — Machine is simulated. Optimizer is an example layout. Live CSI needs ESP32 + `csi_stream.py`; otherwise stay in Demo Mode.
+6. **Close (15s)** — Machine is simulated. Optimizer is an example layout. If ESP32 + `csi_stream.py` are not running on this machine, stay in Demo Mode or the live simulator path; do not call the chart Wi-Fi CSI.
 
 Total ~2.5–3 minutes. If a cycle is slow, skip waiting for a second alert.
 
@@ -86,13 +84,13 @@ print(httpx.post('http://127.0.0.1:8000/api/events',json=e,headers={'X-Sensor-Id
 3. **Listen (20s)** — **Listen to Alert** → **Generating audio…** → **Pause**. One ElevenLabs generate per alert; Pause/Resume/replay use the in-memory / `X-Voice-Cached` clip. Do not click Listen twice on a new alert unless you intend a second billed request. Explain stays hidden until Gemini is configured.
 4. **Close (10s)** — Machine is simulated. Chart may say waiting for samples or **Simulated sensor** after ingest. Do not call it live Wi-Fi CSI.
 
-If FastAPI is down, switch to the Demo Mode fallback. Do not claim ESP32 E2E.
+If FastAPI is down, switch to the Demo Mode fallback. Do not call this simulator ingest path live Wi-Fi CSI.
 
 ---
 
-## Switch to real ESP32 input (when A is ready)
+## Switch to real ESP32 input
 
-The dashboard does not change modes. Keep Live Mode (`VITE_DEMO_MODE=false`). Stop sending simulated `ACTIVITY_*`. A runs `csi_stream.py` against the same FastAPI (`SENSOR_ID=csi-rx-01`, same ingest key, `machine_id=assembly_01`, `method: wifi_csi`). Details: [`sensing/README.md`](sensing/README.md).
+The team demonstrated this path on **24 October 2026** on a teammate’s computer (video recorded): live serial CSI → `csi_stream.py` → FastAPI → dashboard. Recalibrate on whatever machine you use today. The dashboard does not change modes. Keep Live Mode (`VITE_DEMO_MODE=false`). Stop sending simulated `ACTIVITY_*`. Run `csi_stream.py` against the same FastAPI (`SENSOR_ID=csi-rx-01`, same ingest key, `machine_id=assembly_01`, `method: wifi_csi`). Details: [`sensing/README.md`](../sensing/README.md).
 
 | Input | How | Dashboard label |
 |---|---|---|
@@ -100,7 +98,7 @@ The dashboard does not change modes. Keep Live Mode (`VITE_DEMO_MODE=false`). St
 | Simulated activity | HTTP `ACTIVITY_DETECTED` `method: simulated` | Score updates; **Simulated sensor** after samples |
 | ESP32 CSI | `csi_stream.py` on RX serial | **Wi-Fi CSI** when samples have `method: wifi_csi` |
 
-Hardware serial → backend → Dashboard is **not** a verified E2E in this frontend checkpoint. Recalibrate after moving boards. Do not say CSI identified a person or a machine fault.
+That teammate experiment is a prototype demonstration, not a measured accuracy study, not CSI→Tiger, and not certified safety. Recalibrate after moving boards. Do not say CSI identified a person or a machine fault. The machine remains simulated.
 
 ---
 
@@ -137,6 +135,7 @@ If any of those fail, switch back to the Demo Mode fallback. Do not improvise un
 
 ## Talking points
 
-- Detect (CSI concept) → Alert (step-context review) → Optimize (travel cost on an example floor).
-- Frontend already renders contract sensor events. It does not read ESP32 serial.
+- Detect (CSI activity on the live path, or simulated ingest) → Alert (step-context review) → Optimize (travel cost on an example floor).
+- The SPA renders contract sensor events over REST/WebSocket. It does not read ESP32 serial; `csi_stream.py` posts to FastAPI.
+- Physical CSI→dashboard was demonstrated 24 October 2026 on a teammate’s computer (video recorded). Machine remains simulated. Do not claim accuracy, safety certification, or CSI→Tiger from that demo.
 - Auth0 Client Secret never lives in the SPA.

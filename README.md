@@ -34,7 +34,7 @@ Gemini and ElevenLabs **explain and speak** alerts. They never decide whether an
 - **Tiger Data** (PostgreSQL / TimescaleDB) persistent events and alert state when `DATABASE_URL` is set
 - **Auth0** Universal Login (verified locally; presentation demo uses auth disabled)
 - Layout optimizer on example inputs
-- ESP32 TX/RX firmware and Python CSI pipeline (`sensing/`, `firmware/`) — hardware E2E not yet verified
+- ESP32 TX/RX firmware and Python CSI pipeline (`sensing/`, `firmware/`) — physical serial-to-dashboard ingest demonstrated (see Verified integrations)
 
 ---
 
@@ -61,7 +61,7 @@ Gemini and ElevenLabs **explain and speak** alerts. They never decide whether an
                                          ElevenLabs TTS
 ```
 
-\*Physical CSI path is implemented in firmware and `sensing/processing/python/csi_stream.py`. The **verified** demo uses clearly labeled **simulated** `ACTIVITY_*` events (`method: simulated`), not serial CSI.
+\*Firmware lives under `sensing/processing/csi_tx` and `csi_rx` (`firmware/` is a placeholder). On **24 October 2026** the team demonstrated live serial CSI (`method: wifi_csi`) through `csi_stream.py` → FastAPI → the dashboard on a **teammate’s computer** and recorded video. That is a team-confirmed physical experiment, not an automated test. The assembly machine remains simulated. A software-only judging path can still inject `method: simulated` events. CSI→Tiger Data was **not** part of that session.
 
 - There is **no Vite proxy**. The SPA calls `VITE_API_URL` / `VITE_WS_URL`. CORS allows `http://localhost:5173` and `http://127.0.0.1:5173`.
 - **Live Mode** talks only to FastAPI. **Demo Mode** never calls the network. There is no Live→Demo fallback.
@@ -190,7 +190,7 @@ VITE_WS_URL=ws://localhost:8000/ws
 
 Backend `backend/.env`: `AUTH_DISABLED=true`, `SIM_ENABLED=true`, nonempty `SENSOR_INGEST_KEY`.
 
-Open `/dashboard`. Expect **LIVE**, **Simulated machine**, workflow PICK → MOVE → ASSEMBLE → RETURN. The activity chart waits for samples until something posts `ACTIVITY_*`. That is not ESP32 CSI unless `csi_stream.py` is running against flashed hardware.
+Open `/dashboard`. Expect **LIVE**, **Simulated machine**, workflow PICK → MOVE → ASSEMBLE → RETURN. The activity chart waits for samples until something posts `ACTIVITY_*`. Call the chart **Wi-Fi CSI** only when `csi_stream.py` is posting live serial samples (`method: wifi_csi`); otherwise it is waiting or **Simulated sensor**.
 
 Restart Vite after changing `VITE_*` flags.
 
@@ -248,20 +248,25 @@ PR #2 added more CSI-pipeline cases in `sensing/tests/test_csi_stream.py` (the f
 
 ## Verified integrations and current limitations
 
-**Verified**
+**Verified in software tests** (no ESP32 required)
 
-- Simulated machine and deterministic alerts (`ACTIVITY_REVIEW` during ASSEMBLE; step delay at >1.5× expected duration)
+- Simulated machine and deterministic alerts (`ACTIVITY_REVIEW` during ASSEMBLE; step delay at >1.5× expected duration). The same alert rules apply to `method: wifi_csi` and `method: simulated` ingest.
 - Live Mode REST + WebSocket against local FastAPI
 - Gemini explanation rendered in the dashboard (server key; HTTP 200)
 - ElevenLabs MP3 playback, pause/resume, and cache (`X-Voice-Cached`)
-- Tiger Data persistence: events in a TimescaleDB hypertable; history and acknowledged alerts restored after backend restart
+- Tiger Data persistence of **software** events: TimescaleDB hypertable; history and acknowledged alerts restored after backend restart (not claimed for the physical CSI session below)
 - Auth0 **local** Google sign-in, RS256 API access token (`aud` = `https://factorypulse-api`), JWT-protected REST, authenticated WebSocket, logout; missing/malformed tokens return 401
 
-The **presentation / judging demo** uses `AUTH_DISABLED=true` for simplicity.
+**Team-confirmed physical experiment (24 October 2026)**
+
+ESP32 TX/RX → USB serial → `csi_stream.py` → FastAPI `POST /api/events` → live dashboard, with movement-related `ACTIVITY_*` events appearing in real time. Performed on a **teammate’s computer**; **video was recorded**. This is a prototype demonstration of the ingest path, not a measured accuracy study, not environmental reliability, and not certified safety monitoring. CSI→Tiger Data persistence was **not** verified in that session.
+
+The **presentation / judging demo** may still use `AUTH_DISABLED=true` and simulated activity if hardware is not on stage.
 
 **Not yet verified**
 
-- Full physical ESP32 → CSI → FastAPI → Tiger Data → dashboard path
+- Physical CSI events written to Tiger Data in the same session as live serial ingest
+- Detection accuracy, false-positive/false-negative rates, or reliability across rooms
 - Production Auth0 deployment
 - Real-account cross-company isolation E2E (schema and API are company-scoped; live cell is single-company `demo-co`)
 - Real machine / PLC integration
@@ -273,7 +278,7 @@ The **presentation / judging demo** uses `AUTH_DISABLED=true` for simplicity.
 
 Gallery on Devpost: [FactoryPulse: Smart Assembly Cell Intelligence](https://devpost.com/software/factorypulse-smart-assembly-cell-intelligence).
 
-Local capture files are not currently tracked in this repository. Do not treat simulated activity charts as physical CSI.
+Local capture files are not currently tracked in this repository. Do not treat **Simulated sensor** charts as physical CSI. The 24 October 2026 physical demo video lives with the teammate who recorded it, not in this repo.
 
 ---
 
@@ -297,7 +302,7 @@ Neither Cursor nor Grok Bot is a FactoryPulse runtime dependency. The app does n
 
 ## Roadmap
 
-- Complete physical CSI validation (ESP32 → FastAPI → Tiger Data → dashboard)
+- Persist live `wifi_csi` events to Tiger Data in the same session as serial ingest; characterize false positives and link recovery on hardware
 - Historical analytics on TimescaleDB (beyond existing step-duration metrics)
 - Production Auth0 and independent live cells per company
 - Feed operational history into the layout optimizer

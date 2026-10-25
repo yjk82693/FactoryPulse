@@ -124,12 +124,12 @@ At a crowded venue, keep the boards ~2 m apart and the path away from foot traff
 | CSI link loss (4 s gap) → `LINK LOST` / `RECOVERED`, calibration kept | | **Yes** | |
 | Backend killed and restarted mid-stream → state resynced | | **Yes** | |
 | Robust calibration, transient rejection, hysteresis, payload fields, link logic | | | **Yes** (unit tests) |
-| `csi_stream.py` on live serial → backend → **Dashboard** | **Not yet** | | |
+| `csi_stream.py` on live serial → FastAPI → **Dashboard** (movement → real-time `ACTIVITY_*`) | **Yes** (2026-10-24 team experiment on a teammate’s computer; video recorded). Prototype path only — not an accuracy study | | |
 | Serial unplug/replug reconnect | **Not yet** | | |
 | Empty-room calibration numbers with the new method | **Not yet** | | |
 | False-positive rate, detection range, any machine-level behavior | **Not tested** | | |
 
-The recorded file is labeled `walking` but includes pauses, so it is useful for pipeline testing, not for measuring accuracy.
+The **24 October 2026** dashboard row is a **team-confirmed physical observation**, not an automated test. Software rows (replay HTTP, unit tests) remain separate. The recorded `walking` CSV includes pauses: it is useful for pipeline testing, not for measuring accuracy. That session did **not** verify CSI events in Tiger Data.
 
 ## Tests
 

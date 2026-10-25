@@ -2,9 +2,11 @@
 
 Contract: [`docs/event-schema.md`](event-schema.md) **v1.3** (live ingest unchanged from v1.2).
 
-The existing React `LiveSource` consumes Developer B’s FastAPI backend without swapping in Demo data. The **machine is always simulated**. Sensor readings come from `POST /api/events` (ESP32 RX via `csi_stream.py`, or a contract-valid test ingest). Local default is `AUTH_DISABLED=true` and in-memory persistence unless `DATABASE_URL` is set. `/api/console/*` exists; the SPA still uses in-memory Console until `VITE_CONSOLE_HTTP=true`. Gemini explain and ElevenLabs voice live in isolated C-owned modules (`backend/ai/`) and return **501** when keys are unset. Keep the server bound to localhost. Hardware serial → dashboard is **not** claimed as a verified E2E here.
+The existing React `LiveSource` consumes Developer B’s FastAPI backend without swapping in Demo data. The **machine is always simulated**. Sensor readings come from `POST /api/events` (ESP32 RX via `csi_stream.py`, or a contract-valid test ingest). Local default is `AUTH_DISABLED=true` and in-memory persistence unless `DATABASE_URL` is set. `/api/console/*` exists; the SPA still uses in-memory Console until `VITE_CONSOLE_HTTP=true`. Gemini explain and ElevenLabs voice live in isolated C-owned modules (`backend/ai/`) and return **501** when keys are unset. Keep the server bound to localhost.
 
-**Verified (no ESP32 hardware):** REST (`/health`, `/api/me`, `/api/state`, `/api/events`, `/api/alerts`, `POST /api/alerts/{id}/ack`) and WebSocket `/ws` (`ready` then `state`) with `AUTH_DISABLED=true` and `SIM_ENABLED=true`. Activity for review alerts is a **synthetic HTTP** `ACTIVITY_DETECTED` (`method: simulated`), not serial CSI. Voice and explain return **501** when ElevenLabs/Gemini env is unset (not 404). With keys set, those routes return 200 (see root README).
+**Software tests (no ESP32):** REST (`/health`, `/api/me`, `/api/state`, `/api/events`, `/api/alerts`, `POST /api/alerts/{id}/ack`) and WebSocket `/ws` (`ready` then `state`) with `AUTH_DISABLED=true` and `SIM_ENABLED=true`. Those tests inject **synthetic HTTP** `ACTIVITY_DETECTED` (`method: simulated` or contract `wifi_csi` in `backend/test_live.py`). Voice and explain return **501** when ElevenLabs/Gemini env is unset (not 404). With keys set, those routes return 200 (see root README).
+
+**Team-confirmed physical experiment (24 October 2026):** live ESP32 serial → `csi_stream.py` → FastAPI → dashboard, with movement-related activity events in real time. Run on a **teammate’s computer**; **video recorded**. Prototype demonstration only — not measured detection accuracy, industrial reliability, or certified safety. CSI→Tiger Data was **not** verified in that session. Repeat the hardware steps in §2 whenever you need the same path locally.
 
 ## 1. Backend (from FactoryPulse repo root)
 
@@ -41,7 +43,9 @@ export AUTH_DISABLED=true SENSOR_INGEST_KEY=test-only-key SIM_ENABLED=false
 python -m unittest backend.test_live
 ```
 
-## 2. Sensor (optional, ESP32 — not required for dashboard Live Mode)
+## 2. Sensor (ESP32 — required only for a physical CSI demo)
+
+Live Mode works without hardware: the machine simulator and optional `method: simulated` ingest are enough for software judging. For **Wi-Fi CSI** on the dashboard, flash TX/RX and run `csi_stream.py` as below. The team demonstrated that path on **24 October 2026** (teammate’s computer, video recorded). That does not replace local calibration on a new setup.
 
 Flash TX/RX as described in `sensing/processing/README.md`. Close the serial monitor.
 
@@ -57,7 +61,7 @@ Keep sensors fixed and the figure standing still during the initial 20-second ca
 
 The headless detector publishes `ACTIVITY_LEVEL` up to ten times per second by default and detected/cleared transitions with `method: wifi_csi`. HTTP runs on a separate thread. On reconnection it publishes the current status instead of replaying old movement. After CSI interruption it recalibrates.
 
-Until this process is posting events, the dashboard must **not** be described as a hardware CSI demo. Backend default `sensor.method` is `wifi_csi` even with no samples; the UI labels that state as waiting for samples, not a live CSI reading.
+Until this process is posting events, the dashboard must **not** be described as a live hardware CSI demo. Backend default `sensor.method` is `wifi_csi` even with no samples; the UI labels that state as waiting for samples, not a live CSI reading. The 24 October 2026 team demo is evidence that this path has worked on one teammate machine; it is not a claim about Tiger persistence or sensing accuracy.
 
 ## 3. React (Live Mode, auth disabled)
 
@@ -93,7 +97,7 @@ Open http://localhost:5173/dashboard.
 - Movement during ASSEMBLE: one `ACTIVITY_REVIEW` warning per cycle; other steps: `ACTIVITY_INFO`.
 - Unplug RX: within five seconds **Sensor disconnected**, Active cleared. Header can stay **LIVE**.
 
-If any of those hardware checks fail, say so. Do not claim ESP32 end-to-end from the simulator-only path.
+If any of those hardware checks fail on *this* machine, say so. Do not treat the simulator-only path as live CSI, and do not treat the 24 October 2026 teammate video as measured accuracy or CSI→Tiger.
 
 ## 4. What this backend does not provide
 
