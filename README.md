@@ -26,7 +26,7 @@ Gemini and ElevenLabs **explain and speak** alerts. They never decide whether an
 
 ## Features
 
-- Simulated **PICK → MOVE → ASSEMBLE → RETURN** cycle (~12 seconds) with step events
+- Simulated **PICK → MOVE → ASSEMBLE → RETURN** cycle (**12 seconds**: 2s + 3s + 5s + 2s) with step events
 - React dashboard with REST bootstrap and live **WebSocket** updates
 - Rule-based `ACTIVITY_REVIEW` and step-delay alerts, plus acknowledge
 - **Gemini** contextual explanations (observed facts, interpretations, disclaimer)
@@ -39,17 +39,6 @@ Gemini and ElevenLabs **explain and speak** alerts. They never decide whether an
 ---
 
 ## Architecture
-
-Windows quick start without a virtual environment: run `setup-local.cmd` once,
-then double-click `start-local.cmd`. This installs Python dependencies in the
-current user's system Python package directory. Backend and Vite run in hidden,
-independent processes and keep running when VS Code or the launching terminal
-closes. Open http://127.0.0.1:5173/dashboard. Run `stop-local.cmd` to stop them.
-Logs are in `.local-runtime/`. Restart after a reboot; this is not an auto-start service.
-Existing environment files are preserved; missing files get local development defaults.
-For ESP32 ingest, use `start-local.cmd -Port COM4` (replace with the RX port).
-This starts a new calibration; keep the sensor setup still during calibration.
-Python 3.11+ and Node 20+ must already be installed. No venv activation is needed.
 
 ```
                     ┌─────────────────────────────────────────┐
@@ -107,7 +96,7 @@ Python 3.11+ and Node 20+ must already be installed. No venv activation is neede
 
 Prerequisites: **Python 3.11+**, **Node 20+**, Git. Run backend commands from the **repository root** so `backend/.env` loads. Health is `GET /health` (not `/api/health`).
 
-**Never copy a `.venv` between macOS, Linux, and Windows.** Create a new virtualenv on each machine.
+**Never copy a `.venv` between macOS, Linux, and Windows.** Create a new virtualenv on each machine. Git still tracks `.venv313/Scripts/python.exe` from an earlier Windows tree even though `.gitignore` lists `.venv313/`; do not run or copy that file.
 
 ### 1. Clone
 
@@ -151,9 +140,24 @@ If `Activate.ps1` is blocked, use Command Prompt: `.venv\Scripts\activate.bat`.
 
 Optional CSI-client extras (not required for the software demo):
 
-```bash
-python -m pip install -r sensing/processing/python/requirements.txt
+```powershell
+python -m pip install -r sensing\processing\python\requirements.txt
 ```
+
+### 3b. Windows no-venv launcher (optional)
+
+Developer B added double-click scripts that **do not use a virtualenv**. They install Python packages with `pip install --user` into the current user's Python 3.11 (preferred path `%LOCALAPPDATA%\Programs\Python\Python311\python.exe`, otherwise `py -3`). Python 3.11+ and Node 20+ must already be installed.
+
+| Script | What it does |
+|---|---|
+| `setup-local.cmd` | `pip install --user` of `backend/requirements.txt` **and** `sensing/processing/python/requirements.txt`, then `npm ci` in `frontend/` |
+| `start-local.cmd` | Hidden FastAPI `:8000` and Vite `:5173`; creates `backend/.env` from the example if missing; if neither `frontend/.env` nor `frontend/.env.local` exists, writes Live Mode `frontend/.env.local` (`VITE_DEMO_MODE=false`). Open http://127.0.0.1:5173/dashboard |
+| `stop-local.cmd` | Stops those processes |
+| `start-local.cmd -Port COM4` | Also starts `scripts/run-sensor.py` on the **ESP32 RX serial port** (not a TCP port). Replace `COM4` with the actual RX COM port. Calibration starts fresh; keep the sensor still during calibration |
+
+Logs and PIDs: `.local-runtime/` (gitignored). Processes keep running if you close the terminal; they are not a Windows service and do not auto-start after reboot. Existing env files are left in place.
+
+This path is convenient on Windows. For isolated, cross-platform work, use the PowerShell venv steps above instead of `--user` installs.
 
 ### 4. Frontend
 
@@ -194,8 +198,9 @@ Restart Vite after changing `VITE_*` flags.
 
 | File | Software demo | Optional |
 |---|---|---|
-| `backend/.env` | `APP_ENV=development`, `AUTH_DISABLED=true`, `SIM_ENABLED=true`, `SENSOR_INGEST_KEY` | `DATABASE_URL`, `GEMINI_API_KEY`, `GEMINI_MODEL` (example default `gemini-3.5-flash-lite`), `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `AUTH0_DOMAIN`, `AUTH0_AUDIENCE`, `DEMO_AUTO_JOIN` |
+| `backend/.env` | `APP_ENV=development`, `AUTH_DISABLED=true`, `SIM_ENABLED=true`, `SENSOR_INGEST_KEY` | `SENSOR_ID` (example default `csi-rx-01`), `DATABASE_URL`, `GEMINI_API_KEY`, `GEMINI_MODEL` (example default `gemini-3.5-flash-lite`), `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL_ID`, `AUTH0_DOMAIN`, `AUTH0_AUDIENCE`, `DEMO_AUTO_JOIN` |
 | `frontend/.env` | `VITE_DEMO_MODE`, `VITE_AUTH_DISABLED`; Live Mode also needs `VITE_API_URL` and `VITE_WS_URL` | `VITE_CONSOLE_HTTP`, `VITE_AUTH0_DOMAIN`, `VITE_AUTH0_CLIENT_ID`, `VITE_AUTH0_AUDIENCE` |
+| CSI client | — | `SERIAL_PORT` (ESP32 RX serial device), `BACKEND_URL` (default `http://localhost:8000`), `SENSOR_ID`, `SENSOR_INGEST_KEY` |
 
 Never put an Auth0 **Client Secret** in the frontend. SPA apps use Domain + Client ID only. For local Auth0 UI testing, use `http://localhost:5173` as the callback (not only `127.0.0.1` unless that origin is also allowlisted).
 
@@ -225,15 +230,17 @@ python -m unittest discover -s sensing/tests
 cd frontend; npm test
 ```
 
-Verified counts on the Devpost submission snapshot:
+Last fully recorded suite (software demo, no Tiger test database):
 
 | Suite | Result |
 |---|---|
-| Backend | 27 passing; **5 persistence tests skipped** unless `TEST_DATABASE_URL` is set |
-| Frontend | 122 passing (`vitest run`) |
-| Sensing | 18 passing; 1 skipped |
+| Backend | **27 passing**; **5 persistence tests skipped** unless `TEST_DATABASE_URL` is set (`backend/test_persistence.py`) |
+| Frontend | **122 passing** (`npm test` → `vitest run`) |
+| Sensing | **18 passing**; **1 skipped** |
 
-`origin/main` later gained extra CSI-pipeline tests (PR #2). Re-run the commands above for the current tree; do not treat the snapshot counts as frozen.
+PR #2 added more CSI-pipeline cases in `sensing/tests/test_csi_stream.py` (the file now defines 26 `test_*` methods). Re-run the commands above for the current tree; do not treat 18 as frozen. Frontend also has `npm run build` and `npm run test:watch`; they are not part of the recorded 122-count run.
+
+`TEST_DATABASE_URL` is a **test-only** name. It is not required for the software demo.
 
 **Do not point `TEST_DATABASE_URL` at the shared Tiger Data instance.** Persistence tests create and drop an isolated schema (`factory_test_<uuid>`). Use a disposable local or throwaway database only.
 
@@ -280,7 +287,11 @@ Work was split across sensing/firmware, FastAPI/persistence, and the React dashb
 
 ## AI-assisted development
 
-Cursor and Grok were used as **development tools** (implementation, debugging, review, and wiring across the shared contract). They are not runtime dependencies. FactoryPulse does not call Cursor or Grok in production. Developers remained responsible for design choices, tests, and what we claim as verified.
+**Cursor Agent with Grok 4.6** was the coding agent for implementation, debugging, review, and wiring across the shared contract.
+
+Separately, **Grok Bot** (Cursor’s Grok Bot desktop app, not the IDE chat) runs a named teammate **FactoryPulse Docs Reviewer**. A daily **read-only** README audit routine (`Daily FactoryPulse README review`, around 9:00 AM ET) reviews the public GitHub repo and posts findings only in that Grok Bot conversation. It does not commit, push, or comment on GitHub. A routine Test on **25 October 2026** completed against `main` at `5186d78` with no repository writes.
+
+Neither Cursor nor Grok Bot is a FactoryPulse runtime dependency. The app does not call them in production. Developers remain responsible for design choices, tests, and what we claim as verified.
 
 ---
 
