@@ -79,7 +79,7 @@ describe("HttpConsoleStore", () => {
     );
     await failed.refresh();
     expect(failed.getSnapshot().machines).toEqual([]);
-    expect(failed.getMeta().error).toMatch(/not available/i);
+    expect(failed.getMeta().error).toMatch(/unable to load console catalog/i);
   });
 
   it("POSTs a machine then refreshes", async () => {

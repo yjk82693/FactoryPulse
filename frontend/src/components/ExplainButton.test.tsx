@@ -19,6 +19,20 @@ describe("ExplainButton", () => {
     expect(fetchExplain).not.toHaveBeenCalled();
   });
 
+  it("is hidden in Live Mode when explain_enabled is false", () => {
+    const fetchExplain = vi.fn();
+    render(
+      <ExplainButton
+        alert={makeAlert()}
+        demoMode={false}
+        explainEnabled={false}
+        fetchExplain={fetchExplain}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Explain" })).not.toBeInTheDocument();
+    expect(fetchExplain).not.toHaveBeenCalled();
+  });
+
   it("loads an explanation and keeps facts separate from interpretations", async () => {
     const fetchExplain = vi.fn(async () => ({ explanation: "Could be expected motion." }));
     render(

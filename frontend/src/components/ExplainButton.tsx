@@ -44,7 +44,7 @@ export function ExplainButton({
   const [error, setError] = useState<string | null>(null);
   const [disabled, setDisabled] = useState(false);
 
-  if (demoMode) {
+  if (demoMode || !explainEnabled) {
     return null;
   }
 
@@ -69,7 +69,7 @@ export function ExplainButton({
     }
   }
 
-  if (!explainEnabled || disabled) {
+  if (disabled) {
     return (
       <button className={styles.button} type="button" disabled title="Alert explanations are not configured on the server.">
         Explain

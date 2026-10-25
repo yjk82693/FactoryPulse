@@ -22,7 +22,7 @@ function toConsoleError(error: unknown): ConsoleError {
   if (error instanceof ApiClientError) {
     if (error.status === 404 || error.status === 501) {
       return new ConsoleError(
-        "Console API is not available on this backend. Leave VITE_CONSOLE_HTTP=false until /api/console/* is implemented.",
+        "Unable to load Console catalog from the API. Last known Console data is kept; mock seed data is not used.",
       );
     }
     if (error.code === "profile_kind_mismatch") {
