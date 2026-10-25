@@ -214,13 +214,15 @@ python -m unittest discover -s sensing/tests
 cd frontend; npm test
 ```
 
-Verified counts on the submission snapshot:
+Verified counts on the Devpost submission snapshot:
 
 | Suite | Result |
 |---|---|
 | Backend | 27 passing; **5 persistence tests skipped** unless `TEST_DATABASE_URL` is set |
 | Frontend | 122 passing (`vitest run`) |
 | Sensing | 18 passing; 1 skipped |
+
+`origin/main` later gained extra CSI-pipeline tests (PR #2). Re-run the commands above for the current tree; do not treat the snapshot counts as frozen.
 
 **Do not point `TEST_DATABASE_URL` at the shared Tiger Data instance.** Persistence tests create and drop an isolated schema (`factory_test_<uuid>`). Use a disposable local or throwaway database only.
 
