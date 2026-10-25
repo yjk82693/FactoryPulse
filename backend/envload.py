@@ -11,7 +11,7 @@ def load_backend_env(path: Path | None = None) -> None:
     env_path = path if path is not None else Path(__file__).resolve().parent / '.env'
     if not env_path.is_file():
         return
-    for raw in env_path.read_text().splitlines():
+    for raw in env_path.read_text(encoding='utf-8-sig').splitlines():
         line = raw.strip()
         if not line or line.startswith('#') or '=' not in line:
             continue

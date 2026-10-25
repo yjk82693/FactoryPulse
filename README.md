@@ -40,6 +40,17 @@ Gemini and ElevenLabs **explain and speak** alerts. They never decide whether an
 
 ## Architecture
 
+Windows quick start without a virtual environment: run `setup-local.cmd` once,
+then double-click `start-local.cmd`. This installs Python dependencies in the
+current user's system Python package directory. Backend and Vite run in hidden,
+independent processes and keep running when VS Code or the launching terminal
+closes. Open http://127.0.0.1:5173/dashboard. Run `stop-local.cmd` to stop them.
+Logs are in `.local-runtime/`. Restart after a reboot; this is not an auto-start service.
+Existing environment files are preserved; missing files get local development defaults.
+For ESP32 ingest, use `start-local.cmd -Port COM4` (replace with the RX port).
+This starts a new calibration; keep the sensor setup still during calibration.
+Python 3.11+ and Node 20+ must already be installed. No venv activation is needed.
+
 ```
                     ┌─────────────────────────────────────────┐
  Simulated machine  │  FastAPI  (backend/main.py)             │

@@ -5,6 +5,8 @@
 
 # python
 .venv/
+.venv313/
+.local-runtime/
 venv/
 __pycache__/
 *.pyc
