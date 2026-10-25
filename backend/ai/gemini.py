@@ -15,6 +15,31 @@ class GeminiError(Exception):
         self.detail = detail
 
 
+def _redact(text: str, key: str | None) -> str:
+    if key and key in text:
+        return text.replace(key, '[redacted]')
+    return text
+
+
+def _map_http_error(response, key: str | None) -> GeminiError:
+    detail = f'Gemini request failed ({response.status_code})'
+    try:
+        payload = response.json()
+        error = payload.get('error') if isinstance(payload, dict) else None
+        status = error.get('status') if isinstance(error, dict) else None
+        message = error.get('message') if isinstance(error, dict) else None
+        lowered = message.lower() if isinstance(message, str) else ''
+        if response.status_code == 429 or status == 'RESOURCE_EXHAUSTED' or 'quota' in lowered:
+            detail = 'Gemini quota exceeded'
+        elif status in ('UNAUTHENTICATED', 'PERMISSION_DENIED') or 'api key' in lowered:
+            detail = 'Gemini API key is invalid'
+        elif isinstance(message, str) and message.strip():
+            detail = _redact(message.strip(), key)[:180]
+    except ValueError:
+        pass
+    return GeminiError('explain_upstream_error', detail)
+
+
 def explain_from_evidence(evidence: dict) -> str:
     key = gemini_api_key()
     if not key:
@@ -22,7 +47,11 @@ def explain_from_evidence(evidence: dict) -> str:
     url = GENERATE_URL.format(model=gemini_model())
     payload = {
         'contents': [{'parts': [{'text': gemini_prompt(evidence)}]}],
-        'generationConfig': {'temperature': 0.2, 'maxOutputTokens': 512},
+        'generationConfig': {
+            'temperature': 0.2,
+            'maxOutputTokens': 512,
+            'responseMimeType': 'application/json',
+        },
     }
     try:
         with httpx.Client(timeout=TIMEOUT) as client:
@@ -36,7 +65,7 @@ def explain_from_evidence(evidence: dict) -> str:
     except httpx.HTTPError as error:
         raise GeminiError('explain_upstream_error', 'Gemini request failed') from error
     if response.status_code >= 400:
-        raise GeminiError('explain_upstream_error', 'Gemini request failed')
+        raise _map_http_error(response, key)
     try:
         body = response.json()
         text = body['candidates'][0]['content']['parts'][0]['text']

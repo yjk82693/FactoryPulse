@@ -13,12 +13,16 @@ MAX_EXPLANATION = 2000
 def trusted_evidence(hub, alert: dict) -> dict:
     related_ids = set(alert.get('related_event_ids') or [])
     related = []
+    allowed = ('activity_score', 'threshold', 'method', 'step', 'cycle_id', 'duration_ms', 'expected_ms')
     for event in hub.events:
         if event.get('event_id') in related_ids:
+            payload = event.get('payload') if isinstance(event.get('payload'), dict) else {}
+            stored = {field: payload[field] for field in allowed if field in payload}
             related.append(dict(
                 event_type=event.get('event_type'),
                 timestamp=event.get('timestamp'),
                 source=event.get('source'),
+                **stored,
             ))
     return dict(
         alert=dict(

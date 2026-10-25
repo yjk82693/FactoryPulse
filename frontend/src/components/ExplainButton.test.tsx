@@ -71,4 +71,44 @@ describe("ExplainButton", () => {
     );
     expect(screen.getByTitle("Alert explanations are not configured on the server.")).toBeInTheDocument();
   });
+
+  it("shows a quota error without disabling Explain", async () => {
+    const fetchExplain = vi.fn(async () => {
+      throw new ApiClientError("Gemini quota exceeded", "explain_upstream_error", 502);
+    });
+    render(
+      <ExplainButton
+        alert={makeAlert()}
+        demoMode={false}
+        explainEnabled
+        fetchExplain={fetchExplain}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Explain" }));
+    await waitFor(() =>
+      expect(screen.getByText("Gemini quota exceeded, try again later.")).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("button", { name: "Hide explanation" })).not.toBeDisabled();
+  });
+
+  it("disables after an invalid server key without exposing the secret", async () => {
+    const fetchExplain = vi.fn(async () => {
+      throw new ApiClientError("Gemini API key is invalid", "explain_upstream_error", 502);
+    });
+    render(
+      <ExplainButton
+        alert={makeAlert()}
+        demoMode={false}
+        explainEnabled
+        fetchExplain={fetchExplain}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Explain" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Explain" })).toBeDisabled(),
+    );
+    expect(screen.getByTitle("Alert explanations are not configured on the server.")).toBeInTheDocument();
+    expect(screen.queryByText(/test-gemini/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/invalid/i)).not.toBeInTheDocument();
+  });
 });

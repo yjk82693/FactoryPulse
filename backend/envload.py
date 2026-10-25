@@ -1,9 +1,13 @@
 """Load backend/.env into os.environ. Never logs values. Does not override existing process env."""
 from pathlib import Path
 import os
+import sys
 
 
 def load_backend_env(path: Path | None = None) -> None:
+    # Unittest/pytest must not inherit developer Gemini/ElevenLabs secrets from backend/.env.
+    if path is None and ('unittest' in sys.modules or 'pytest' in sys.modules):
+        return
     env_path = path if path is not None else Path(__file__).resolve().parent / '.env'
     if not env_path.is_file():
         return

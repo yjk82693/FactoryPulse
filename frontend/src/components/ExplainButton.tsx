@@ -23,6 +23,12 @@ function mapExplainError(error: unknown): { message: string; disable: boolean } 
       return { message: "Alert no longer available.", disable: false };
     }
     if (error.status === 502 || error.status === 504) {
+      if (error.detail.toLowerCase().includes("quota")) {
+        return { message: "Gemini quota exceeded, try again later.", disable: false };
+      }
+      if (error.detail.toLowerCase().includes("api key")) {
+        return { message: "Gemini is not available with the current server key.", disable: true };
+      }
       return { message: "Explanation service unavailable, try again.", disable: false };
     }
   }

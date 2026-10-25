@@ -13,7 +13,7 @@ def gemini_api_key() -> str | None:
 
 
 def gemini_model() -> str:
-    return os.getenv('GEMINI_MODEL', '').strip() or 'gemini-2.0-flash'
+    return os.getenv('GEMINI_MODEL', '').strip() or 'gemini-3.5-flash-lite'
 
 
 def elevenlabs_api_key() -> str | None:

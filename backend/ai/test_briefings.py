@@ -8,9 +8,9 @@ from uuid import uuid4
 os.environ['AUTH_DISABLED'] = 'true'
 os.environ['SIM_ENABLED'] = 'false'
 os.environ['SENSOR_INGEST_KEY'] = 'test-only-key'
-os.environ.pop('GEMINI_API_KEY', None)
-os.environ.pop('ELEVENLABS_API_KEY', None)
-os.environ.pop('ELEVENLABS_VOICE_ID', None)
+os.environ['GEMINI_API_KEY'] = ''
+os.environ['ELEVENLABS_API_KEY'] = ''
+os.environ['ELEVENLABS_VOICE_ID'] = ''
 
 from fastapi.testclient import TestClient
 
@@ -156,6 +156,108 @@ class BriefingRouteTests(unittest.TestCase):
         self.assertTrue(server['explain_enabled'])
         self.assertTrue(server['voice_enabled'])
         self.assertNotIn('test-gemini', json.dumps(server))
+
+
+class GeminiClientTests(unittest.TestCase):
+    def setUp(self):
+        os.environ['GEMINI_API_KEY'] = 'test-gemini-secret'
+
+    def tearDown(self):
+        os.environ.pop('GEMINI_API_KEY', None)
+
+    def _fake_response(self, status_code, payload=None, text=''):
+        class Fake:
+            def __init__(self):
+                self.status_code = status_code
+                self.text = text
+
+            def json(self):
+                if payload is None:
+                    raise ValueError('not json')
+                return payload
+
+        return Fake()
+
+    def test_maps_quota_without_leaking_key(self):
+        from backend.ai.gemini import _map_http_error
+        error = _map_http_error(self._fake_response(429, {
+            'error': {'status': 'RESOURCE_EXHAUSTED', 'message': 'quota exceeded for test-gemini-secret'},
+        }), 'test-gemini-secret')
+        self.assertEqual(error.code, 'explain_upstream_error')
+        self.assertEqual(error.detail, 'Gemini quota exceeded')
+        self.assertNotIn('test-gemini-secret', error.detail)
+
+    def test_maps_invalid_key(self):
+        from backend.ai.gemini import _map_http_error
+        error = _map_http_error(self._fake_response(400, {
+            'error': {'status': 'UNAUTHENTICATED', 'message': 'API key not valid'},
+        }), 'test-gemini-secret')
+        self.assertEqual(error.detail, 'Gemini API key is invalid')
+
+    def test_explain_posts_trusted_prompt_and_formats_json(self):
+        from backend.ai import gemini as gemini_service
+        captured = {}
+
+        class FakeClient:
+            def __init__(self, timeout=None):
+                captured['timeout'] = timeout
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def post(self, url, headers=None, json=None):
+                captured['url'] = url
+                captured['headers'] = headers
+                captured['json'] = json
+                model_text = (
+                    '{"observations":["ACTIVITY_REVIEW during ASSEMBLE"],'
+                    '"hypotheses":["Possible nearby motion; not a confirmed fault"],'
+                    '"recommended_checks":["Confirm expected cell motion"],'
+                    '"summary":"Review the activity observation."}'
+                )
+                class Ok:
+                    status_code = 200
+                    def json(self_inner):
+                        return {'candidates': [{'content': {'parts': [{'text': model_text}]}}]}
+                return Ok()
+
+        evidence = dict(alert=dict(alert_id='a1', rule='ACTIVITY_REVIEW'))
+        with patch('backend.ai.gemini.httpx.Client', FakeClient):
+            text = gemini_service.explain_from_evidence(evidence)
+        self.assertIn('Possible interpretations', text)
+        self.assertIn('not a confirmed machine fault', text.lower())
+        self.assertEqual(captured['timeout'], 15.0)
+        self.assertIn('gemini-3.5-flash-lite', captured['url'])
+        self.assertEqual(captured['headers']['x-goog-api-key'], 'test-gemini-secret')
+        self.assertEqual(captured['json']['generationConfig']['responseMimeType'], 'application/json')
+        self.assertIn('ACTIVITY_REVIEW', captured['json']['contents'][0]['parts'][0]['text'])
+        self.assertNotIn('Ignore previous', captured['json']['contents'][0]['parts'][0]['text'])
+
+    def test_timeout_maps_to_explain_timeout(self):
+        import httpx
+        from backend.ai import gemini as gemini_service
+        from backend.ai.gemini import GeminiError
+
+        class FakeClient:
+            def __init__(self, timeout=None):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def post(self, *args, **kwargs):
+                raise httpx.TimeoutException('slow')
+
+        with patch('backend.ai.gemini.httpx.Client', FakeClient):
+            with self.assertRaises(GeminiError) as raised:
+                gemini_service.explain_from_evidence({'alert': {}})
+        self.assertEqual(raised.exception.code, 'explain_timeout')
 
 
 if __name__ == '__main__':
