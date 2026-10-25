@@ -53,9 +53,9 @@ python sensing/processing/python/csi_stream.py --port /dev/cu.usbserial-XXXX
 
 PowerShell uses `COM5` in place of the cu.usbserial device.
 
-Leave the sensing area empty for the first eight seconds. Per-frame normalized CSI amplitude is measured over a one-second window; mean subcarrier standard deviation becomes the activity score. The threshold is baseline mean + 4 standard deviations. Both score and threshold use `x/(1+x)` to fit the 0..1 event contract. This measures movement, not reliable stationary person presence. Use `--k 6` to reduce sensitivity or `--k 3` to increase it.
+Keep sensors fixed and the figure standing still during the initial 20-second calibration. The default detector uses a 0.2-second window, per-subcarrier adjacent-amplitude changes, and 50ms detection sustain. Compare 0.2/0.5-second windows and 50/100ms sustain as described in [the figure fall experiment](figure-fall-csi.md).
 
-The headless detector publishes `ACTIVITY_LEVEL` twice per second and detected/cleared transitions with `method: wifi_csi`. HTTP runs on a separate thread. On reconnection it publishes the current status instead of replaying old movement. After CSI interruption it recalibrates.
+The headless detector publishes `ACTIVITY_LEVEL` up to ten times per second by default and detected/cleared transitions with `method: wifi_csi`. HTTP runs on a separate thread. On reconnection it publishes the current status instead of replaying old movement. After CSI interruption it recalibrates.
 
 Until this process is posting events, the dashboard must **not** be described as a hardware CSI demo. Backend default `sensor.method` is `wifi_csi` even with no samples; the UI labels that state as waiting for samples, not a live CSI reading.
 

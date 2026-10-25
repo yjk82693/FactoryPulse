@@ -118,9 +118,13 @@ Machine (source "machine", internal simulator only):
 - STEP_FAILED    { "step": Step, "cycle_id": int, "reason": str }
 
 Sensor (source "sensor", external sensor ingestion only):
-- ACTIVITY_LEVEL    { "activity_score": float 0..1, "method": Method, "baseline": float }   about 2 per second
+- ACTIVITY_LEVEL    { "activity_score": float 0..1, "method": Method, "baseline": float, "threshold"?: float 0..1 }   about 2 per second
 - ACTIVITY_DETECTED { "activity_score": float, "threshold": float, "method": Method }        rising edge
 - ACTIVITY_CLEARED  { "activity_score": float, "method": Method }                            falling edge
+
+Live CSI includes the calibrated threshold in each LEVEL payload, using the same
+`x/(1+x)` scale as activity_score. Older senders may omit it; the chart retains
+the last known threshold and hides the threshold line until one is received.
 
 System (source "system", created only by the backend):
 - ALERT_CREATED      { "alert_id": uuid, "rule": Rule, "severity": Severity, "message": str, "related_event_ids": [uuid] }

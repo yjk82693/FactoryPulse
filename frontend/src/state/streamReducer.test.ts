@@ -3,6 +3,26 @@ import { initialStream, MAX_EVENTS, SAMPLE_WINDOW_MS, streamReducer } from "./st
 import { makeAlert, makeEvent, makeReady, makeState } from "../test/fixtures";
 
 describe("streamReducer", () => {
+  it("uses calibrated thresholds and preserves sustained activity until cleared", () => {
+    let snap = streamReducer(initialStream, { type: "state", state: makeState() });
+    const send = (id: string, event_type: "ACTIVITY_LEVEL" | "ACTIVITY_DETECTED" | "ACTIVITY_CLEARED", payload: Record<string, unknown>) => {
+      snap = streamReducer(snap, { type: "event", event: makeEvent({
+        event_id: id, source: "sensor", event_type,
+        payload: { activity_score: 0.1, method: "wifi_csi", ...payload } as ReturnType<typeof makeEvent>["payload"],
+      }) });
+    };
+    send("level", "ACTIVITY_LEVEL", { baseline: 0.029, threshold: 0.048 });
+    expect(snap.samples.at(-1)?.threshold).toBe(0.048);
+    send("detected", "ACTIVITY_DETECTED", { threshold: 0.048 });
+    send("quiet", "ACTIVITY_LEVEL", { baseline: 0.029, activity_score: 0.02 });
+    expect(snap.samples.at(-1)?.threshold).toBe(0.048);
+    expect(snap.state?.sensor.active).toBe(true);
+    expect(snap.samples.at(-1)?.active).toBe(true);
+    send("cleared", "ACTIVITY_CLEARED", {});
+    expect(snap.samples.at(-1)?.active).toBe(false);
+    expect(snap.state?.sensor.active).toBe(false);
+  });
+
   it("applies ready", () => {
     const ready = makeReady();
     const next = streamReducer(initialStream, { type: "ready", ready });

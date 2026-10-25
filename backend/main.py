@@ -38,6 +38,7 @@ class Level(BaseModel):
     activity_score: float = Field(ge=0, le=1)
     method: Literal['wifi_csi', 'simulated']
     baseline: float
+    threshold: float | None = Field(default=None, ge=0, le=1)
 
 
 class Detected(BaseModel):
@@ -115,7 +116,7 @@ class Hub:
 
     def atomic(self, action):
         """Commit durable history and state before publishing any live messages."""
-        if not self.repository:
+        if not self.repository or not self.repository.url:
             return action()
         fields = ('events', 'ids', 'seen', 'alerts', 'review_cycle', 'last_sensor', 'machine', 'sensor')
         snapshot = {field: deepcopy(getattr(self, field)) for field in fields}
