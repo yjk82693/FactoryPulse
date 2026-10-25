@@ -1,76 +1,169 @@
-# FactoryPulse
+# FactoryPulse: Smart Assembly Cell Intelligence
 
-HackPSU Fall 2026 prototype: **Detect → Alert → Optimize**.
+**Detect → Alert → Optimize** for a single assembly cell.
 
-Wi-Fi CSI activity sensing (2× ESP32) plus a **simulated** assembly cell, operational alerts, a live dashboard, and a layout optimizer. This is not a certified safety system. CSI does not identify people or locations. The assembly machine is simulated. The software demo uses a **simulated sensor** unless a hardware E2E is separately verified.
+FactoryPulse connects machine execution with activity sensing so operators see not only what the cell is doing, but what is happening around it. A simulated assembly workflow and activity events feed one live dashboard, with rule-based alerts, Gemini explanations, ElevenLabs spoken briefings, and Tiger Data history.
 
-Contract: [`docs/event-schema.md`](docs/event-schema.md) **v1.3**. Judging script: [`docs/DEMO.md`](docs/DEMO.md). Live CSI notes: [`docs/live-csi.md`](docs/live-csi.md). Frontend details: [`frontend/README.md`](frontend/README.md).
+This is a HackPSU Fall 2026 prototype, not a certified industrial safety system. Wi-Fi CSI observes radio-channel change associated with motion. It does not identify people, measure precise location, or confirm hazards. The assembly machine is simulated.
 
-| Directory | Owner |
-|---|---|
-| `firmware/`, `sensing/` | Developer A — ESP32 TX/RX, CSI processing, `csi_stream.py` ingest client |
-| `backend/` ingest, Console HTTP, Auth0, persistence | Developer B — FastAPI hub, machine sim, `/api/events`, `/api/console/*`, optional `DATABASE_URL` |
-| `backend/ai/` | Developer C — Gemini explain and ElevenLabs voice (isolated from ingest) |
-| `frontend/` | Developer C — React dashboard, Auth0 SPA, Explain/Listen UI, optimizer, Console adapter |
-| `docs/event-schema.md` | Shared contract **v1.3** — change only with A+B+C. Archived v1.2: `docs/archive/event-schema-v1.2.md` |
+**[Devpost project](https://devpost.com/software/factorypulse-smart-assembly-cell-intelligence)** · Contract: [`docs/event-schema.md`](docs/event-schema.md) v1.3 · Judging notes: [`docs/DEMO.md`](docs/DEMO.md)
+
+---
+
+## Problem and solution
+
+Machine logs show what a controller scheduled. They do not show physical activity next to the cell. A standalone sensor shows motion, but not whether the machine is in ASSEMBLE, MOVE, or idle.
+
+FactoryPulse keeps those two signals in one operational timeline:
+
+1. **Detect** — timestamped machine steps plus activity scores.
+2. **Alert** — deterministic rules (not a model) raise operator-review alerts when activity coincides with ASSEMBLE, or when a step exceeds 1.5× its expected duration.
+3. **Optimize** — a layout planner that currently runs on **example** workstation inputs, not CSI coordinates.
+
+Gemini and ElevenLabs **explain and speak** alerts. They never decide whether an alert is raised.
+
+---
+
+## Features
+
+- Simulated **PICK → MOVE → ASSEMBLE → RETURN** cycle (~12 seconds) with step events
+- React dashboard with REST bootstrap and live **WebSocket** updates
+- Rule-based `ACTIVITY_REVIEW` and step-delay alerts, plus acknowledge
+- **Gemini** contextual explanations (observed facts, interpretations, disclaimer)
+- **ElevenLabs** spoken briefings with pause/resume and server-side caching
+- **Tiger Data** (PostgreSQL / TimescaleDB) persistent events and alert state when `DATABASE_URL` is set
+- **Auth0** Universal Login (verified locally; presentation demo uses auth disabled)
+- Layout optimizer on example inputs
+- ESP32 TX/RX firmware and Python CSI pipeline (`sensing/`, `firmware/`) — hardware E2E not yet verified
+
+---
 
 ## Architecture
 
 ```
-ESP32 TX/RX  →  csi_stream.py     →  POST /api/events     FastAPI :8000
-Machine sim  →  in-process ingest →  State + WS /ws    →  React :5173
-Gemini       →  POST /api/alerts/{id}/explain  (C, backend/ai, server key only)
-ElevenLabs   →  POST /api/alerts/{id}/voice    (C, backend/ai, server key only)
+                    ┌─────────────────────────────────────────┐
+ Simulated machine  │  FastAPI  (backend/main.py)             │
+      simulator ───►│  ingest · rules · state · /ws           │
+                    │                                         │
+ ESP32 CSI* ─► csi_stream.py ─► POST /api/events              │
+                    │         │                               │
+                    │         ▼                               │
+                    │  Tiger Data / TimescaleDB  (optional)   │
+                    │  events hypertable · alerts · snapshots │
+                    └────────────┬────────────────────────────┘
+                                 │ REST + WebSocket
+                                 ▼
+                    React SPA  (frontend/, Vite :5173)
+                    DemoSource  or  LiveSource
+                                 │
+                    Explain / Listen ──► backend/ai/
+                                         Gemini API
+                                         ElevenLabs TTS
 ```
 
-- There is **no Vite proxy**. The SPA calls `VITE_API_URL` / `VITE_WS_URL` directly. FastAPI CORS allows `http://localhost:5173` and `http://127.0.0.1:5173`.
-- Live Mode talks only to FastAPI (`LiveSource`). Demo Mode never calls the network (`DemoSource`). There is no Live→Demo fallback.
-- Machine remains `simulated: true` until the team verifies a non-simulated cell.
-- `/api/console/*` exists. The SPA Console stays in-memory unless Live Mode and `VITE_CONSOLE_HTTP=true` (HTTP catalog may have **no machines**).
+\*Physical CSI path is implemented in firmware and `sensing/processing/python/csi_stream.py`. The **verified** demo uses clearly labeled **simulated** `ACTIVITY_*` events (`method: simulated`), not serial CSI.
+
+- There is **no Vite proxy**. The SPA calls `VITE_API_URL` / `VITE_WS_URL`. CORS allows `http://localhost:5173` and `http://127.0.0.1:5173`.
+- **Live Mode** talks only to FastAPI. **Demo Mode** never calls the network. There is no Live→Demo fallback.
+- `company_id` is assigned server-side from membership or the sensor registry, never from the client event body.
 - Gemini and ElevenLabs keys are **server-only**. Never put them in `frontend/.env`.
+
+| Path | Role |
+|---|---|
+| `firmware/`, `sensing/` | ESP32 TX/RX, CSI processing, ingest client |
+| `backend/` | FastAPI hub, machine sim, ingest, Console HTTP, Auth0 JWT, optional `DATABASE_URL` |
+| `backend/ai/` | Gemini explain and ElevenLabs voice |
+| `frontend/` | Dashboard, Auth0 SPA, Explain/Listen, optimizer |
+| `docs/event-schema.md` | Shared v1.3 contract |
 
 ---
 
-## Teammate setup (A/B — complete software demo, no ESP32)
+## Technology stack
 
-Requires **Python 3.11+** and **Node 20+**. Run commands from the **repository root** (`FactoryPulse`). Health is `GET /health` (not `/api/health`).
+| Area | Stack |
+|---|---|
+| Frontend | React 18, TypeScript, Vite 5, React Router 6, Vitest, `@auth0/auth0-react`, Recharts |
+| Backend | Python 3.11+, FastAPI, Uvicorn, PyJWT, httpx, psycopg |
+| Persistence | Tiger Data (PostgreSQL + TimescaleDB), or in-memory if `DATABASE_URL` is unset |
+| Auth | Auth0 Universal Login; FastAPI validates RS256 access tokens |
+| AI / voice | Gemini API, ElevenLabs TTS (backend only) |
+| Sensing | ESP32 firmware, NumPy / PySerial CSI client |
+| Tests | `unittest` (backend, sensing), Vitest (frontend) |
 
-### 1. Backend
+---
+
+## Getting started
+
+Prerequisites: **Python 3.11+**, **Node 20+**, Git. Run backend commands from the **repository root** so `backend/.env` loads. Health is `GET /health` (not `/api/health`).
+
+**Never copy a `.venv` between macOS, Linux, and Windows.** Create a new virtualenv on each machine.
+
+### 1. Clone
 
 ```bash
-git pull origin main
+git clone https://github.com/yjk82693/FactoryPulse.git
+cd FactoryPulse
+```
+
+### 2. Backend — macOS / Linux
+
+```bash
 python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 python -m pip install -U pip
 python -m pip install -r backend/requirements.txt
 cp backend/.env.example backend/.env
 ```
 
-`backend/.env` must include a **nonempty** ingest secret. The example `SENSOR_INGEST_KEY=local-dev-key` is **local development only**, not production. FastAPI **refuses to start** if the key is empty. Leave `GEMINI_API_KEY` and `ELEVENLABS_*` blank unless you have those accounts — the dashboard still runs; Explain/Listen stay hidden and return 501 if called.
+Edit `backend/.env`. `SENSOR_INGEST_KEY` must be nonempty or FastAPI will refuse to start. The example `local-dev-key` is **local development only**. Leave `GEMINI_API_KEY`, `ELEVENLABS_*`, and `DATABASE_URL` blank unless you have those accounts — the dashboard still runs; Explain/Listen stay hidden and return 501 if called.
 
 ```bash
-# still in the venv, still at repo root
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
 Check: `curl -s http://127.0.0.1:8000/health` → `{"status":"ok"}`.
 
-Optional CSI-client extras (A only, not required for the software demo):
+### 3. Backend — Windows (PowerShell)
+
+Do not reuse a virtualenv created on macOS or Linux.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -U pip
+python -m pip install -r backend\requirements.txt
+copy backend\.env.example backend\.env
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+```
+
+If `Activate.ps1` is blocked, use Command Prompt: `.venv\Scripts\activate.bat`.
+
+Optional CSI-client extras (not required for the software demo):
 
 ```bash
 python -m pip install -r sensing/processing/python/requirements.txt
 ```
 
-### 2. Frontend (Live Mode against that backend)
+### 4. Frontend
 
-`frontend/.env.example` defaults to **Demo Mode**. For the shared Live demo, copy it and switch flags:
+`frontend/.env.example` defaults to **Demo Mode** (`VITE_DEMO_MODE=true`).
 
 ```bash
 cd frontend
 cp .env.example .env
+npm install
+npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-Set in `frontend/.env` (no secrets):
+Windows: `copy .env.example .env` then the same `npm` commands.
+
+Open [http://localhost:5173](http://localhost:5173) or [http://127.0.0.1:5173](http://127.0.0.1:5173).
+
+### 5. Demo Mode vs Live Mode
+
+**Demo Mode** (no backend required): keep `VITE_DEMO_MODE=true`. The SPA uses in-memory `DemoSource`. Explore Demo on the landing page.
+
+**Live Mode** (local FastAPI, typical judging path):
 
 ```
 VITE_DEMO_MODE=false
@@ -80,52 +173,120 @@ VITE_API_URL=http://localhost:8000
 VITE_WS_URL=ws://localhost:8000/ws
 ```
 
-```bash
-npm install
-npm run dev -- --host 127.0.0.1 --port 5173
-```
+Backend `backend/.env`: `AUTH_DISABLED=true`, `SIM_ENABLED=true`, nonempty `SENSOR_INGEST_KEY`.
 
-Open [http://127.0.0.1:5173/dashboard](http://127.0.0.1:5173/dashboard) (or `http://localhost:5173/dashboard`). Expect **LIVE**, **Simulated machine**, workflow `PICK → MOVE → ASSEMBLE → RETURN`. The activity chart waits for samples until something posts `ACTIVITY_*` — that is not ESP32 CSI.
+Open `/dashboard`. Expect **LIVE**, **Simulated machine**, workflow PICK → MOVE → ASSEMBLE → RETURN. The activity chart waits for samples until something posts `ACTIVITY_*`. That is not ESP32 CSI unless `csi_stream.py` is running against flashed hardware.
 
-If FastAPI is down, set `VITE_DEMO_MODE=true`, restart Vite, and use Demo Mode instead.
+Restart Vite after changing `VITE_*` flags.
 
-### 3. Tests (from repo root, venv active)
+### 6. Optional environment variables (names only — never commit values)
+
+| File | Software demo | Optional |
+|---|---|---|
+| `backend/.env` | `APP_ENV=development`, `AUTH_DISABLED=true`, `SIM_ENABLED=true`, `SENSOR_INGEST_KEY` | `DATABASE_URL`, `GEMINI_API_KEY`, `GEMINI_MODEL` (example default `gemini-3.5-flash-lite`), `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `AUTH0_DOMAIN`, `AUTH0_AUDIENCE`, `DEMO_AUTO_JOIN` |
+| `frontend/.env` | `VITE_DEMO_MODE`, `VITE_AUTH_DISABLED`; Live Mode also needs `VITE_API_URL` and `VITE_WS_URL` | `VITE_CONSOLE_HTTP`, `VITE_AUTH0_DOMAIN`, `VITE_AUTH0_CLIENT_ID`, `VITE_AUTH0_AUDIENCE` |
+
+Never put an Auth0 **Client Secret** in the frontend. SPA apps use Domain + Client ID only. For local Auth0 UI testing, use `http://localhost:5173` as the callback (not only `127.0.0.1` unless that origin is also allowlisted).
+
+Keep `VITE_CONSOLE_HTTP=false` for the live-cell demo: the HTTP catalog may have no machines.
+
+---
+
+## Testing
+
+From the repository root, with the backend venv active:
 
 ```bash
 export AUTH_DISABLED=true SENSOR_INGEST_KEY=test-only-key SIM_ENABLED=false
 python -m unittest discover -s backend -p 'test*.py'
+python -m unittest discover -s sensing/tests
 cd frontend && npm test
 ```
 
-Persistence tests skip unless `TEST_DATABASE_URL` is set. That is expected.
+Windows PowerShell:
 
-### Env names (never commit values)
+```powershell
+$env:AUTH_DISABLED = 'true'
+$env:SENSOR_INGEST_KEY = 'test-only-key'
+$env:SIM_ENABLED = 'false'
+python -m unittest discover -s backend -p 'test*.py'
+python -m unittest discover -s sensing/tests
+cd frontend; npm test
+```
 
-| File | Required for software demo | Optional |
-|---|---|---|
-| `backend/.env` | `AUTH_DISABLED=true`, `SIM_ENABLED=true`, `SENSOR_INGEST_KEY`, `APP_ENV=development` | `GEMINI_API_KEY`, `GEMINI_MODEL`, `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `DATABASE_URL`, Auth0 |
-| `frontend/.env` | `VITE_DEMO_MODE`, `VITE_AUTH_DISABLED`, and in Live Mode `VITE_API_URL` + `VITE_WS_URL` | `VITE_CONSOLE_HTTP`, Auth0 SPA ids |
+Verified counts on the submission snapshot:
+
+| Suite | Result |
+|---|---|
+| Backend | 27 passing; **5 persistence tests skipped** unless `TEST_DATABASE_URL` is set |
+| Frontend | 122 passing (`vitest run`) |
+| Sensing | 18 passing; 1 skipped |
+
+**Do not point `TEST_DATABASE_URL` at the shared Tiger Data instance.** Persistence tests create and drop an isolated schema (`factory_test_<uuid>`). Use a disposable local or throwaway database only.
 
 ---
 
-## Implemented (verified)
+## Verified integrations and current limitations
 
-- Landing, Demo Mode, Live Mode REST + WebSocket against local FastAPI with `AUTH_DISABLED=true` (machine sim; **not** ESP32 hardware).
-- Alerts and acknowledge. `ACTIVITY_REVIEW` is operator review, not a verified incident.
-- **Gemini Explain** and **ElevenLabs Listen** when server keys are set (real HTTP 200 + dashboard UI). Unset keys → 501; controls hidden when `explain_enabled` / `voice_enabled` are false.
-- Layout optimizer with example (not CSI) coordinates.
+**Verified**
 
-## Pending or unverified
+- Simulated machine and deterministic alerts (`ACTIVITY_REVIEW` during ASSEMBLE; step delay at >1.5× expected duration)
+- Live Mode REST + WebSocket against local FastAPI
+- Gemini explanation rendered in the dashboard (server key; HTTP 200)
+- ElevenLabs MP3 playback, pause/resume, and cache (`X-Voice-Cached`)
+- Tiger Data persistence: events in a TimescaleDB hypertable; history and acknowledged alerts restored after backend restart
+- Auth0 **local** Google sign-in, RS256 API access token (`aud` = `https://factorypulse-api`), JWT-protected REST, authenticated WebSocket, logout; missing/malformed tokens return 401
 
-- **ESP32 hardware E2E:** firmware and `csi_stream.py` exist; serial CSI → dashboard has **not** been verified. Do not treat simulated `ACTIVITY_DETECTED` as ESP32 data.
-- **Auth0 backend JWT:** verification code is unit-tested. Local demo uses `AUTH_DISABLED=true`. Bearer E2E against this API is **unverified**.
-- **Tiger Data / PostgreSQL:** default is **in-memory**. Persistence tests skip without `TEST_DATABASE_URL`.
-- HTTP Console in the SPA: keep `VITE_CONSOLE_HTTP=false` for the live-cell demo.
+The **presentation / judging demo** uses `AUTH_DISABLED=true` for simplicity.
 
-## Limitations
+**Not yet verified**
 
-- The assembly cell is a simulated machine in Live Mode and Demo Mode.
+- Full physical ESP32 → CSI → FastAPI → Tiger Data → dashboard path
+- Production Auth0 deployment
+- Real-account cross-company isolation E2E (schema and API are company-scoped; live cell is single-company `demo-co`)
+- Real machine / PLC integration
+- Layout optimization from sensor-derived coordinates
+
+---
+
+## Screenshots
+
+Gallery on Devpost: [FactoryPulse: Smart Assembly Cell Intelligence](https://devpost.com/software/factorypulse-smart-assembly-cell-intelligence).
+
+Local capture files are not currently tracked in this repository. Do not treat simulated activity charts as physical CSI.
+
+---
+
+## Team and HackPSU
+
+Three-person team for **HackPSU Fall 2026**, as listed on Devpost: Jeff Kim, Yoojun Kim, and Kunjoong Kim.
+
+Work was split across sensing/firmware, FastAPI/persistence, and the React dashboard, integrated through the v1.3 event contract.
+
+---
+
+## AI-assisted development
+
+Cursor and Grok were used as **development tools** (implementation, debugging, review, and wiring across the shared contract). They are not runtime dependencies. FactoryPulse does not call Cursor or Grok in production. Developers remained responsible for design choices, tests, and what we claim as verified.
+
+---
+
+## Roadmap
+
+- Complete physical CSI validation (ESP32 → FastAPI → Tiger Data → dashboard)
+- Historical analytics on TimescaleDB (beyond existing step-duration metrics)
+- Production Auth0 and independent live cells per company
+- Feed operational history into the layout optimizer
+- Connect real machine controllers instead of the in-process simulator
+
+---
+
+## Limitations (please read)
+
+- The assembly cell is simulated in Live Mode and Demo Mode.
 - Demo Mode never calls the backend.
-- Wi-Fi CSI / activity score is an operational observation of radio-channel change, not diagnosis, identity, or location.
-- `ACTIVITY_REVIEW` recommends operator review. It is not a confirmed machine fault or safety incident.
-- There is no Vite reverse-proxy; mismatched `localhost` vs `127.0.0.1` for the **page** is fine (CORS allows both). Keep `VITE_API_URL` pointing at the API you actually started.
+- Activity scores are operational observations, not diagnosis, identity, or location.
+- `ACTIVITY_REVIEW` recommends operator review. It is not a confirmed mechanical failure or safety incident.
+- Gemini does not raise alerts.
+- The optimizer does not use live CSI positions.
+- This is not a production multi-tenant SaaS.
