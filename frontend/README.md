@@ -17,7 +17,7 @@ App: http://localhost:5173
 - `/dashboard` assembly cell dashboard  
 - `/optimizer` example factory layout optimizer (not CSI coordinates)  
 - `/optimizer/sensors` illustrative sensor-placement comparison  
-- `/machines`, `/profiles`, `/simulator`, `/sensors` console (in-memory by default; set `VITE_CONSOLE_HTTP=true` in Live Mode after B ships `/api/console/*`)  
+- `/machines`, `/profiles`, `/simulator`, `/sensors` console (in-memory by default; `GET /api/console/catalog` exists — keep `VITE_CONSOLE_HTTP=false` for the live-cell demo so Machines is not an empty HTTP catalog)  
 Backend (Live Mode): http://localhost:8000 — setup in [`docs/live-csi.md`](../docs/live-csi.md). Shared contract: [`docs/event-schema.md`](../docs/event-schema.md) v1.3.
 
 Hackathon walkthrough and ESP32/API fallback: [`docs/DEMO.md`](../docs/DEMO.md).

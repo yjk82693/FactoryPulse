@@ -4,9 +4,9 @@ Contract: [`docs/event-schema.md`](event-schema.md) **v1.3** (live ingest unchan
 
 The existing React `LiveSource` consumes Developer B’s FastAPI backend without swapping in Demo data. The **machine is always simulated**. Sensor readings come from `POST /api/events` (ESP32 RX via `csi_stream.py`, or a contract-valid test ingest). Local default is `AUTH_DISABLED=true` and in-memory persistence unless `DATABASE_URL` is set. `/api/console/*` exists; the SPA still uses in-memory Console until `VITE_CONSOLE_HTTP=true`. Gemini explain and ElevenLabs voice live in isolated C-owned modules (`backend/ai/`) and return **501** when keys are unset. Keep the server bound to localhost. Hardware serial → dashboard is **not** claimed as a verified E2E here.
 
-**Verified 2026-10-24 (no ESP32 hardware):** REST (`/health`, `/api/me`, `/api/state`, `/api/events`, `/api/alerts`, `POST /api/alerts/{id}/ack`) and WebSocket `/ws` (`ready` then `state`) against `2364894` with `AUTH_DISABLED=true` and `SIM_ENABLED=true`. Activity was injected as a **synthetic HTTP** `ACTIVITY_DETECTED` (`method: simulated`), not from serial CSI. Voice `POST /api/alerts/{id}/voice` and explain return **501** when ElevenLabs/Gemini env is unset (not 404).
+**Verified (no ESP32 hardware):** REST (`/health`, `/api/me`, `/api/state`, `/api/events`, `/api/alerts`, `POST /api/alerts/{id}/ack`) and WebSocket `/ws` (`ready` then `state`) with `AUTH_DISABLED=true` and `SIM_ENABLED=true`. Activity for review alerts is a **synthetic HTTP** `ACTIVITY_DETECTED` (`method: simulated`), not serial CSI. Voice and explain return **501** when ElevenLabs/Gemini env is unset (not 404). With keys set, those routes return 200 (see root README).
 
-## 1. Backend (from FactoryTetris)
+## 1. Backend (from FactoryPulse repo root)
 
 macOS / zsh:
 
@@ -32,7 +32,7 @@ $env:SENSOR_INGEST_KEY = 'replace-with-your-local-secret'
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
-Startup **requires** `AUTH_DISABLED=true` and `SENSOR_INGEST_KEY`. Do not set `AUTH_DISABLED=false` against this server; Auth0 JWT validation is not present.
+Startup **requires** a nonempty `SENSOR_INGEST_KEY`. Local software demo uses `AUTH_DISABLED=true` (allowed only when `APP_ENV` is development/local/test). JWT verification exists in `backend/auth.py` and unit tests; Bearer E2E against this FastAPI is **unverified**. Keep `AUTH_DISABLED=true` for the teammate demo.
 
 Backend contract tests (from repo root, with the venv active). CSI preprocessing also needs `numpy` and `pyserial` (`sensing/processing/python/requirements.txt`):
 
