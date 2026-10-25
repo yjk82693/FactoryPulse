@@ -5,7 +5,7 @@ ACTIVITY_LEVEL / ACTIVITY_DETECTED / ACTIVITY_CLEARED to POST /api/events.
 Payloads use only the contract fields; everything else is local logging.
 
 What the score means: change in the Wi-Fi channel between the two boards over
-the last second. It reflects motion near the TX-RX path. It does not identify
+the selected time window. It reflects motion near the TX-RX path. It does not identify
 people, machines, machine faults, or locations, and a still person can look
 like an empty area.
 
@@ -76,6 +76,25 @@ def score(frames):
     return float(values.std(axis=0).mean())
 
 
+def subcarrier_changes(frames):
+    """Per-subcarrier RMS of adjacent normalized-amplitude differences.
+
+    Frame normalization suppresses common gain changes. Keeping 52 separate
+    measurements avoids averaging a localized response across the whole band.
+    """
+    values = np.asarray(frames, dtype=float)
+    if len(values) < 2:
+        return np.zeros(values.shape[1], dtype=float)
+    values = values / (values.mean(axis=1, keepdims=True) + 1e-6)
+    return np.sqrt(np.mean(np.diff(values, axis=0) ** 2, axis=0))
+
+
+def change_score(frames, top_subcarriers=3):
+    """Average the strongest few subcarrier changes rather than all 52."""
+    changes = subcarrier_changes(frames)
+    return float(np.sort(changes)[-top_subcarriers:].mean())
+
+
 def bounded(value):
     """Monotonic map to the contract's 0..1 range; threshold and baseline use the same map."""
     return value / (1 + value)
@@ -85,7 +104,7 @@ def bounded(value):
 # Calibration
 # ---------------------------------------------------------------------------
 class Calibration:
-    """Empty-area baseline from raw (unbounded) scores.
+    """Stationary-scene baseline from raw (unbounded) scores.
 
     Robust statistics: median and MAD, so a short disturbance during calibration
     does not inflate the threshold the way mean + k*std does.
@@ -117,8 +136,10 @@ class Calibration:
 
     @classmethod
     def from_dict(cls, d):
+        fields = {'baseline', 'sigma', 'threshold', 'k', 'samples', 'noisy', 'created_at',
+                  'baseline_bounded', 'threshold_bounded'}
         return cls(d['baseline'], d['sigma'], d['threshold'], d['k'], d['samples'], d['noisy'],
-                   d.get('created_at'))
+                   d.get('created_at'), extra={key: value for key, value in d.items() if key not in fields})
 
 
 # ---------------------------------------------------------------------------
@@ -128,8 +149,9 @@ class ActivityTracker:
     """Hysteresis state machine over the motion score.
 
     * Rising: score must stay above ``threshold`` for ``sustain_s`` seconds.
-      The 1 s score window already stretches any burst by ~1 s, so sustain must
-      be longer than the window to reject short bursts. Shorter excursions are counted as transients and never reach the backend
+      A windowed score can outlast the physical motion. Long sustain rejects
+      brief bursts; the figure experiment deliberately uses 50-100ms sustain.
+      Shorter excursions are counted as transients and never reach the backend
       as ACTIVITY_DETECTED (they are still visible in ACTIVITY_LEVEL).
     * Falling: score must stay below a lower clear level for ``clear_s`` seconds,
       which stops DETECTED/CLEARED chatter around the threshold.
@@ -145,8 +167,11 @@ class ActivityTracker:
 
     def update(self, now, value):
         """Return 'detected', 'cleared', 'transient', or None."""
+        if self.cal.extra.get('score_delta') is not None:
+            # Compare raw scores with the empty-area baseline in either direction.
+            value = self.cal.baseline + abs(value - self.cal.baseline)
         if not self.active:
-            if value > self.cal.threshold:
+            if value >= self.cal.threshold:
                 if self.above_since is None:
                     self.above_since = now
                 self.last_above = now
@@ -225,7 +250,17 @@ class LinkMonitor:
 class Detector:
     def __init__(self, window_s=1.0, calib_s=20.0, k=6.0, sustain_s=2.0, clear_s=2.0,
                  level_period_s=0.5, link_timeout_s=2.0, reuse_calibration_s=60.0,
-                 calibration=None, max_calib_attempts=3, log=print):
+                 calibration=None, max_calib_attempts=3, log=print,
+                 score_mode='mean-std', top_subcarriers=3, eval_hz=10.0, score_delta=None):
+        if score_mode not in ('mean-std', 'subcarrier-delta'):
+            raise ValueError('Unknown score mode')
+        if not 1 <= top_subcarriers <= len(VALID_IDX):
+            raise ValueError('top_subcarriers must be between 1 and 52')
+        if not np.isfinite(eval_hz) or eval_hz <= 0:
+            raise ValueError('eval_hz must be finite and positive')
+        self.score_mode, self.top_subcarriers = score_mode, top_subcarriers
+        self.eval_period_s, self.score_delta = 1 / eval_hz, score_delta
+        self.subcarrier_values = None
         self.window_s, self.calib_s, self.k = window_s, calib_s, k
         self.sustain_s, self.clear_s = sustain_s, clear_s
         self.level_period_s, self.reuse_s = level_period_s, reuse_calibration_s
@@ -254,7 +289,8 @@ class Detector:
     def _restart_calibration(self, reason):
         self.cal = self.tracker = None
         self.calib_scores, self.calib_start = [], None
-        self.log(f'{reason} Recalibrating: keep the TX-RX area empty for {self.calib_s:.0f}s.')
+        self.log(f'{reason} Recalibrating: keep sensors fixed and the figure standing still '
+                 f'for {self.calib_s:.0f}s; do not touch the setup.')
 
     def current_edge(self):
         """Edge event describing the current state (used to resync the backend)."""
@@ -289,33 +325,51 @@ class Detector:
         self.frames.append((now, amp))
         while self.frames and self.frames[0][0] < now - self.window_s:
             self.frames.popleft()
-        if len(self.frames) < 10 or now - self.frames[0][0] < self.window_s * 0.8:
+        min_frames = 4 if self.score_mode == 'subcarrier-delta' else 10
+        if len(self.frames) < min_frames or now - self.frames[0][0] < self.window_s * 0.8:
             return events
-        if self.last_eval is not None and now - self.last_eval < 0.1:
+        if self.last_eval is not None and now - self.last_eval < self.eval_period_s - 1e-9:
             return events
         self.last_eval = now
-        self.value = score([f for _, f in self.frames])
+        amplitudes = [f for _, f in self.frames]
+        if self.score_mode == 'subcarrier-delta':
+            self.subcarrier_values = subcarrier_changes(amplitudes)
+            self.value = float(np.sort(self.subcarrier_values)[-self.top_subcarriers:].mean())
+        else:
+            self.value = score(amplitudes)
 
         if self.cal is None:
             if self.calib_start is None:
                 self.calib_start = now
                 self.calib_attempts += 1
-                self.log(f'Calibrating ({self.calib_s:.0f}s). Keep the TX-RX area empty.')
+                self.log(f'Calibrating ({self.calib_s:.0f}s). Keep sensors fixed and the figure '
+                         'standing still; do not touch the setup.')
             self.calib_scores.append(self.value)
             if now - self.calib_start >= self.calib_s:
                 cal = Calibration.from_scores(self.calib_scores, self.k)
+                if getattr(self, 'score_delta', None) is not None:
+                    cal.threshold = cal.baseline + self.score_delta
                 if cal.noisy and self.calib_attempts < self.max_calib_attempts:
                     self.log(f'Calibration looks disturbed (motion during calibration?). '
                              f'Attempt {self.calib_attempts}/{self.max_calib_attempts}.')
                     self.calib_scores, self.calib_start = [], None
                     return events
                 cal.extra = dict(packet_rate=round(self.link.rate(), 1),
-                                 rssi_median=float(np.median(self.rssi)) if self.rssi else None)
+                                 rssi_median=float(np.median(self.rssi)) if self.rssi else None,
+                                 score_mode=self.score_mode, window_s=self.window_s,
+                                 top_subcarriers=self.top_subcarriers)
+                if getattr(self, 'score_delta', None) is not None:
+                    cal.extra['score_delta'] = self.score_delta
                 self.cal = cal
                 self.tracker = ActivityTracker(cal, self.sustain_s, self.clear_s)
                 self.log(f'Calibrated: baseline={cal.baseline:.4f} sigma={cal.sigma:.4f} '
                          f'threshold={cal.threshold:.4f} ({cal.samples} samples'
-                         f'{", NOISY - area may not have been empty" if cal.noisy else ""})')
+                         f'{", NOISY - scene may not have been stationary" if cal.noisy else ""})')
+                self.log(f'RX measured {self.link.rate():.1f} pkt/s (firmware target: 100 Hz); '
+                         f'{len(self.frames)} frames/window, scoring up to {1 / self.eval_period_s:g} Hz.')
+                if self.link.rate() < 80:
+                    self.log('RX below 80 pkt/s: 50ms contains fewer than 4 packets; '
+                             'compare 100ms sustain and check the radio/serial link.')
             return events
 
         change = self.tracker.update(now, self.value)
@@ -330,7 +384,8 @@ class Detector:
                      f'{self.sustain_s:.1f}s sustain)')
         if self.last_level is None or now - self.last_level >= self.level_period_s:
             self.last_level = now
-            events.insert(0, self._event('ACTIVITY_LEVEL', baseline=round(bounded(self.cal.baseline), 4)))
+            events.insert(0, self._event('ACTIVITY_LEVEL', baseline=round(bounded(self.cal.baseline), 4),
+                                         threshold=round(bounded(self.cal.threshold), 4)))
         return events
 
 
@@ -354,7 +409,11 @@ class Publisher:
         self.headers = {'Content-Type': 'application/json',
                         'X-Sensor-Id': sensor_id, 'X-Sensor-Key': sensor_key or ''}
         self.dry_run, self.log = dry_run, log
-        self.queue = queue.Queue(maxsize=200)
+        self.queue = queue.Queue(maxsize=200)  # transitions only; never buried behind LEVEL samples
+        self.level_lock = threading.Lock()
+        self.latest_level = None
+        self.coalesced = 0
+        self.last_post_s = 0.0
         self.max_age_s = 10.0          # never deliver stale motion after an outage
         self.sent = self.failed = self.stale = 0
         self.resync_pending = False    # a send failed; current state must be re-sent
@@ -366,6 +425,15 @@ class Publisher:
 
     def submit(self, kind, payload):
         item = (time.monotonic(), envelope(kind, payload))
+        if kind == 'ACTIVITY_LEVEL' and not self.dry_run:
+            with self.level_lock:
+                if self.latest_level is not None:
+                    self.coalesced += 1
+                self.latest_level = item
+            return
+        # A transition supersedes any older unsent level reading.
+        with self.level_lock:
+            self.latest_level = None
         try:
             self.queue.put_nowait(item)
         except queue.Full:
@@ -377,23 +445,30 @@ class Publisher:
             self.resync_pending = True
 
     def _run(self):
-        while not self.stop.is_set() or not self.queue.empty():
+        while not self.stop.is_set() or not self.queue.empty() or self.latest_level is not None:
             try:
-                queued_at, event = self.queue.get(timeout=0.2)
+                queued_at, event = self.queue.get(timeout=0.05)
             except queue.Empty:
-                continue
+                with self.level_lock:
+                    item, self.latest_level = self.latest_level, None
+                if item is None:
+                    continue
+                queued_at, event = item
             if time.monotonic() - queued_at > self.max_age_s:
                 self.stale += 1
-                self.resync_pending = True
+                if event['event_type'] != 'ACTIVITY_LEVEL':
+                    self.resync_pending = True
                 continue
             if self.dry_run:
                 print(json.dumps(event), flush=True)
                 self.sent += 1
                 continue
             try:
+                started = time.monotonic()
                 request = Request(self.url, data=json.dumps(event).encode(), method='POST', headers=self.headers)
                 with urlopen(request, timeout=2) as response:
                     response.read()
+                self.last_post_s = time.monotonic() - started
                 self.sent += 1
                 if self.backend_up is not True:
                     self.log(f'Backend OK: posting to {self.url}')
@@ -480,12 +555,21 @@ def build_parser():
     out.add_argument('--sensor-key', default=os.getenv('SENSOR_INGEST_KEY'))
     out.add_argument('--dry-run', action='store_true', help='print events as JSON instead of POSTing')
     det = p.add_argument_group('detection')
-    det.add_argument('--window', type=float, default=1.0, help='score window seconds')
-    det.add_argument('--calib', type=float, default=20.0, help='empty-area calibration seconds')
+    det.add_argument('--score-mode', choices=('mean-std', 'subcarrier-delta'), default='subcarrier-delta',
+                     help='per-subcarrier adjacent changes (default) or legacy whole-band mean std')
+    det.add_argument('--top-subcarriers', type=int, default=3,
+                     help='number of strongest subcarrier changes to average (1..52)')
+    det.add_argument('--eval-hz', type=float, default=100.0,
+                     help='maximum scoring frequency; actual rate cannot exceed received packets')
+    det.add_argument('--level-period', type=float, default=0.1, help='graph publication period in seconds')
+    det.add_argument('--window', type=float, default=0.2, help='score window seconds; compare 0.2 and 0.5')
+    det.add_argument('--calib', type=float, default=20.0, help='stationary figure calibration seconds')
     det.add_argument('--k', type=float, default=6.0, help='threshold = median + k * robust sigma')
-    det.add_argument('--sustain', type=float, default=2.0,
-                     help='seconds above threshold before DETECTED (must exceed --window)')
-    det.add_argument('--clear', type=float, default=2.0, help='seconds quiet before CLEARED')
+    det.add_argument('--score-delta', type=float,
+                     help='detect raw score deviation from baseline in either direction; overrides --k')
+    det.add_argument('--sustain', type=float, default=0.05,
+                     help='seconds above threshold before DETECTED; compare 0.05 and 0.1 for falls')
+    det.add_argument('--clear', type=float, default=0.3, help='seconds quiet before CLEARED')
     det.add_argument('--link-timeout', type=float, default=2.0, help='CSI silence seconds = link lost')
     det.add_argument('--reuse-calibration', type=float, default=60.0,
                      help='keep calibration after outages up to this many seconds')
@@ -496,18 +580,39 @@ def build_parser():
 
 
 def run(args, log=print):
-    for name in ('window', 'calib', 'k', 'sustain', 'clear', 'link_timeout'):
-        if getattr(args, name) <= 0:
+    delta = getattr(args, 'score_delta', None)
+    if delta is not None and (not np.isfinite(delta) or delta <= 0):
+        raise SystemExit('--score-delta must be finite and positive')
+    for name in ('window', 'calib', 'k', 'sustain', 'clear', 'link_timeout', 'eval_hz', 'level_period'):
+        if not np.isfinite(getattr(args, name)) or getattr(args, name) <= 0:
             raise SystemExit(f'--{name.replace("_", "-")} must be positive')
-    if args.sustain <= args.window:
+    if not 1 <= args.top_subcarriers <= len(VALID_IDX):
+        raise SystemExit('--top-subcarriers must be between 1 and 52')
+    if args.score_mode == 'mean-std' and args.sustain <= args.window:
         log(f'Warning: --sustain {args.sustain} <= --window {args.window}; short bursts will be reported.')
+    log(f'Detection: {args.score_mode}, window={args.window:g}s, sustain={args.sustain:g}s, '
+        f'eval up to {args.eval_hz:g} Hz; RX firmware target=100 Hz (not guaranteed).')
     calibration = None
     if args.load_calibration:
         with open(args.load_calibration) as f:
             calibration = Calibration.from_dict(json.load(f))
+        metadata = calibration.extra
+        if (metadata.get('score_mode', 'mean-std') != args.score_mode
+                or metadata.get('window_s', 1.0) != args.window
+                or (args.score_mode == 'subcarrier-delta'
+                    and metadata.get('top_subcarriers') != args.top_subcarriers)):
+            raise SystemExit('Saved calibration uses different scoring/window settings. '
+                             'Remove --load-calibration and recalibrate with the figure standing still.')
+        if delta is not None:
+            calibration.threshold = calibration.baseline + delta
+            calibration.extra['score_delta'] = delta
+        else:
+            delta = calibration.extra.get('score_delta')
     detector = Detector(window_s=args.window, calib_s=args.calib, k=args.k, sustain_s=args.sustain,
                         clear_s=args.clear, link_timeout_s=args.link_timeout,
-                        reuse_calibration_s=args.reuse_calibration, calibration=calibration, log=log)
+                        reuse_calibration_s=args.reuse_calibration, calibration=calibration, log=log,
+                        score_mode=args.score_mode, top_subcarriers=args.top_subcarriers,
+                        eval_hz=args.eval_hz, score_delta=delta, level_period_s=args.level_period)
     publisher = Publisher(args.backend, args.sensor_id, args.sensor_key, args.dry_run, log)
     stop = threading.Event()
     saved = calibration is not None
@@ -546,7 +651,13 @@ def run(args, log=print):
                 if detector.value is not None:
                     log(f'status: {detector.link.rate():.0f} pkt/s, lost {detector.link.lost}, '
                         f'score {detector.value:.4f}, active {bool(detector.tracker and detector.tracker.active)}, '
-                        f'sent {publisher.sent}, failed {publisher.failed}')
+                        f'sent {publisher.sent}, failed {publisher.failed}, '
+                        f'post {publisher.last_post_s:.2f}s, pending_edges {publisher.queue.qsize()}, '
+                        f'levels_coalesced {publisher.coalesced}')
+                    if detector.subcarrier_values is not None:
+                        strongest = np.argsort(detector.subcarrier_values)[-args.top_subcarriers:][::-1]
+                        detail = ', '.join(f'{VALID_IDX[i]}:{detector.subcarrier_values[i]:.4f}' for i in strongest)
+                        log(f'Subcarrier changes (firmware index:raw RMS): {detail}')
     except KeyboardInterrupt:
         pass
     finally:

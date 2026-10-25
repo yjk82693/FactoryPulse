@@ -10,6 +10,8 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
+import threading
 
 import numpy as np
 
@@ -158,7 +160,7 @@ class DetectionTests(unittest.TestCase):
         det, chan, t, seq = calibrated_detector()
         t, seq, events = feed(det, chan, t, 6, seq0=seq, motion=1.0)
         _, _, more = feed(det, chan, t, 6, seq0=seq)
-        allowed = dict(ACTIVITY_LEVEL={'activity_score', 'method', 'baseline'},
+        allowed = dict(ACTIVITY_LEVEL={'activity_score', 'method', 'baseline', 'threshold'},
                        ACTIVITY_DETECTED={'activity_score', 'method', 'threshold'},
                        ACTIVITY_CLEARED={'activity_score', 'method'})
         for kind, payload in events + more:
@@ -170,6 +172,84 @@ class DetectionTests(unittest.TestCase):
         self.assertEqual(env['source'], 'sensor')
         self.assertEqual(env['machine_id'], 'assembly_01')
         self.assertTrue(env['timestamp'].endswith('Z'))
+
+
+class FastFallTests(unittest.TestCase):
+    def test_sparse_subcarrier_response_is_not_diluted(self):
+        frames = np.full((30, 52), 10.0)
+        frames[10:16, :2] += 5
+        changes = cs.subcarrier_changes(frames)
+        self.assertEqual(changes.shape, (52,))
+        self.assertGreater(changes[0], changes[10] * 10)
+        self.assertGreater(cs.change_score(frames, 3), cs.score(frames) * 2)
+
+    def test_common_gain_changes_do_not_trigger_score(self):
+        base = np.linspace(5, 15, 52)
+        frames = np.array([base * gain for gain in (1, 2, 0.5, 3, 1)])
+        self.assertLess(cs.change_score(frames), 1e-6)
+
+    def test_short_sparse_burst_at_both_windows_and_durations(self):
+        for window in (0.2, 0.5):
+            for sustain in (0.05, 0.1):
+                with self.subTest(window=window, sustain=sustain):
+                    det = cs.Detector(window_s=window, calib_s=2, k=3,
+                                      sustain_s=sustain, clear_s=0.3, eval_hz=100,
+                                      score_mode='subcarrier-delta', score_delta=0.01,
+                                      log=quiet_log)
+                    rng = np.random.default_rng(123)
+                    detections, clears, quiet_detections = [], [], []
+                    for seq in range(600):
+                        t = seq / 100
+                        frame = np.full(52, 10.0) + rng.normal(0, 0.005, 52)
+                        # Only two subcarriers respond, for 60ms.
+                        if 4 <= t < 4.06:
+                            frame[:2] += 5
+                        for kind, _ in det.packet(t, seq, -42, frame):
+                            if kind == 'ACTIVITY_DETECTED':
+                                detections.append(t)
+                                if t < 4:
+                                    quiet_detections.append(t)
+                            elif kind == 'ACTIVITY_CLEARED':
+                                clears.append(t)
+                    self.assertEqual(quiet_detections, [])
+                    self.assertEqual(len(detections), 1)
+                    self.assertLessEqual(detections[0] - 4, sustain + 0.03)
+                    self.assertEqual(len(clears), 1)
+                    self.assertFalse(det.tracker.active)
+                    restored = cs.Calibration.from_dict(det.cal.to_dict())
+                    self.assertEqual(restored.extra['score_mode'], 'subcarrier-delta')
+                    self.assertEqual(restored.extra['window_s'], window)
+                    self.assertEqual(restored.extra['score_delta'], 0.01)
+
+    def test_default_cli_uses_fast_scoring(self):
+        args = cs.build_parser().parse_args([])
+        self.assertEqual(args.score_mode, 'subcarrier-delta')
+        self.assertEqual(args.window, 0.2)
+        self.assertEqual(args.eval_hz, 100)
+        self.assertEqual(args.sustain, 0.05)
+
+    def test_scoring_follows_actual_50_or_100_hz_reception(self):
+        for rate in (50, 100):
+            with self.subTest(rate=rate):
+                det = cs.Detector(window_s=0.2, calib_s=1, eval_hz=100,
+                                  score_mode='subcarrier-delta', log=quiet_log)
+                for seq in range(2 * rate):
+                    det.packet(seq / rate, seq, -42, np.full(52, 10.0))
+                self.assertAlmostEqual(det.link.rate(), rate)
+                self.assertIsNotNone(det.cal)
+                # The old 100ms throttle would only collect about 11 samples.
+                self.assertGreaterEqual(det.cal.samples, rate)
+                self.assertLessEqual(det.cal.samples, rate + 2)
+
+    def test_legacy_calibration_cannot_be_used_with_new_score(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'calibration.json'
+            import json
+            path.write_text(json.dumps(cs.Calibration(0.02, 0.001, 0.03, 3, 100, False).to_dict()))
+            args = cs.build_parser().parse_args(['--dry-run', '--replay', 'unused.csv',
+                                                 '--load-calibration', str(path)])
+            with self.assertRaisesRegex(SystemExit, 'different scoring/window'):
+                cs.run(args, quiet_log)
 
 
 class LinkTests(unittest.TestCase):
@@ -205,6 +285,51 @@ class LinkTests(unittest.TestCase):
         det = cs.Detector(calib_s=2, log=quiet_log)
         feed(det, SyntheticChannel(), 0, 2, drop=range(10, 15))
         self.assertEqual(det.link.lost, 5)
+
+
+class PublisherTests(unittest.TestCase):
+    def test_slow_backend_coalesces_levels_and_prioritizes_transition(self):
+        entered, release = threading.Event(), threading.Event()
+        delivered = []
+
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                pass
+
+            def read(self):
+                return b''
+
+        def slow_post(request, timeout):
+            import json
+            delivered.append(json.loads(request.data))
+            if len(delivered) == 1:
+                entered.set()
+                if not release.wait(3):
+                    raise RuntimeError('test backend was not released')
+            return Response()
+
+        with patch.object(cs, 'urlopen', side_effect=slow_post):
+            pub = cs.Publisher('http://localhost:8000', 'test', 'test', log=quiet_log)
+            try:
+                pub.submit('ACTIVITY_LEVEL', dict(activity_score=0.01))
+                self.assertTrue(entered.wait(2))
+                for i in range(300):
+                    pub.submit('ACTIVITY_LEVEL', dict(activity_score=i / 1000))
+                pub.submit('ACTIVITY_DETECTED', dict(activity_score=0.3, threshold=0.05))
+                pub.submit('ACTIVITY_LEVEL', dict(activity_score=0.4))
+            finally:
+                release.set()
+                pub.close()
+        self.assertEqual([e['event_type'] for e in delivered],
+                         ['ACTIVITY_LEVEL', 'ACTIVITY_DETECTED', 'ACTIVITY_LEVEL'])
+        self.assertEqual(delivered[-1]['payload']['activity_score'], 0.4)
+        self.assertGreater(pub.coalesced, 0)
+        self.assertFalse(pub.resync_pending)
+        self.assertFalse(pub.resync_ready)
+        self.assertEqual(pub.failed, 0)
 
 
 class ReplayTests(unittest.TestCase):
