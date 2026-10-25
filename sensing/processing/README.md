@@ -1,5 +1,7 @@
 # CSI Human Detection (HackPSU)
 
+> Detection pipeline, calibration, demo steps, and limitations: see [`sensing/README.md`](../README.md). This file covers flashing the boards.
+
 Two ESP32-S3 boards:
 - **csi_tx**: Wi-Fi access point (the "router"). Just answers pings.
 - **csi_rx**: connects to csi_tx, pings it 100x/sec, prints CSI of every reply to serial.

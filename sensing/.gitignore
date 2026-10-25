@@ -1,0 +1,3 @@
+# local CSI recordings and per-installation calibration
+*.csv
+cal*.json

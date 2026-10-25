@@ -64,7 +64,7 @@ def reader(ser, frames, rssis, stats, save_file, label, stop, rec):
         stats["count"] += 1
         now = time.time()
         if save_file and rec["start"] <= now < rec["end"]:
-            save_file.write(f"{now:.4f},{label}," + line.split(",", 1)[1])
+            save_file.write(f"{now:.4f},{label}," + line.split(",", 1)[1].rstrip("\r\n") + "\n")
             rec["saved"] += 1
 
 
